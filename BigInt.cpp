@@ -2,14 +2,11 @@
 #include <algorithm>
 #include <charconv>
 #include <functional>
-#include <memory>
 
 const BigInt &BigInt::OneExa()
 {
-    static std::unique_ptr<const BigInt> OneExaPtr = nullptr;
-    if (OneExaPtr == nullptr)
-        OneExaPtr.reset(new BigInt(1'000'000'000'000'000'000));
-    return *OneExaPtr;
+    static const BigInt val(1'000'000'000'000'000'000);
+    return val;
 }
 
 BigInt::BigInt() {}
