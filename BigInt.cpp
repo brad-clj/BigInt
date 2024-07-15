@@ -341,37 +341,19 @@ bool BigInt::operator==(const BigInt &rhs) const
     return negative == rhs.negative && data == rhs.data;
 }
 
-bool BigInt::operator!=(const BigInt &rhs) const
+std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const
 {
-    return negative != rhs.negative || data != rhs.data;
-}
-
-bool BigInt::operator<(const BigInt &rhs) const
-{
-    if (negative != rhs.negative)
-        return negative;
     auto diff = *this - rhs;
-    return diff.negative;
-}
-
-bool BigInt::operator>(const BigInt &rhs) const
-{
-    return rhs < *this;
-}
-
-bool BigInt::operator<=(const BigInt &rhs) const
-{
-    return !(*this > rhs);
-}
-
-bool BigInt::operator>=(const BigInt &rhs) const
-{
-    return !(*this < rhs);
+    return !diff.negative && diff.data.size() == 0
+               ? std::strong_ordering::equal
+           : diff.negative
+               ? std::strong_ordering::less
+               : std::strong_ordering::greater;
 }
 
 std::string BigInt::toString() const
 {
-    if (*this == 0)
+    if (*this == BigInt(0))
         return "0";
     std::string res = negative ? "-" : "";
     auto num = negative ? -*this : *this;

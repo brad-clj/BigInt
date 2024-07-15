@@ -1,4 +1,5 @@
 #pragma once
+#include <compare>
 #include <cstdint>
 #include <string>
 #include <string_view>
@@ -45,11 +46,7 @@ struct BigInt
     BigInt operator>>(const size_t n) const;
     explicit operator bool() const;
     bool operator==(const BigInt &rhs) const;
-    bool operator!=(const BigInt &rhs) const;
-    bool operator<(const BigInt &rhs) const;
-    bool operator>(const BigInt &rhs) const;
-    bool operator<=(const BigInt &rhs) const;
-    bool operator>=(const BigInt &rhs) const;
+    std::strong_ordering operator<=>(const BigInt &rhs) const;
 
     std::string toString() const;
     void normalize();
