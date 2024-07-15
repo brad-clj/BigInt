@@ -3,12 +3,6 @@
 #include <charconv>
 #include <functional>
 
-const BigInt &BigInt::OneExa()
-{
-    static const BigInt val(1'000'000'000'000'000'000);
-    return val;
-}
-
 BigInt::BigInt() {}
 
 BigInt::BigInt(int64_t num)
@@ -19,6 +13,12 @@ BigInt::BigInt(int64_t num)
         data.push_back(static_cast<uint32_t>(num));
         num >>= 32;
     }
+}
+
+static const BigInt &OneExa()
+{
+    static const BigInt val(1'000'000'000'000'000'000);
+    return val;
 }
 
 BigInt::BigInt(std::string_view str)

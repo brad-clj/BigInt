@@ -12,8 +12,6 @@ struct BigInt
     std::vector<uint32_t> data;
     bool negative = false;
 
-    static const BigInt &OneExa();
-
     BigInt();
     BigInt(int64_t num);
     BigInt(std::string_view str);
