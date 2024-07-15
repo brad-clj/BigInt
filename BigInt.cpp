@@ -353,7 +353,7 @@ std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const
 
 std::string BigInt::toString() const
 {
-    if (*this == BigInt(0))
+    if (*this == 0)
         return "0";
     std::string res = negative ? "-" : "";
     auto num = negative ? -*this : *this;
