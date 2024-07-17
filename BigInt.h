@@ -30,18 +30,37 @@ struct BigInt
     BigInt &operator--();
     BigInt operator++(int);
     BigInt operator--(int);
-    BigInt operator-() const;
-    BigInt operator+(const BigInt &rhs) const;
-    BigInt operator-(const BigInt &rhs) const;
+    BigInt operator-() const &;
+    BigInt operator-() &&;
+    BigInt operator+(const BigInt &rhs) const &;
+    BigInt operator+(BigInt &&rhs) const &;
+    BigInt operator+(const BigInt &rhs) &&;
+    BigInt operator+(BigInt &&rhs) &&;
+    BigInt operator-(const BigInt &rhs) const &;
+    BigInt operator-(BigInt &&rhs) const &;
+    BigInt operator-(const BigInt &rhs) &&;
+    BigInt operator-(BigInt &&rhs) &&;
     BigInt operator*(const BigInt &rhs) const;
     BigInt operator/(const BigInt &rhs) const;
     BigInt operator%(const BigInt &rhs) const;
-    BigInt operator~() const;
-    BigInt operator&(const BigInt &rhs) const;
-    BigInt operator|(const BigInt &rhs) const;
-    BigInt operator^(const BigInt &rhs) const;
-    BigInt operator<<(const size_t n) const;
-    BigInt operator>>(const size_t n) const;
+    BigInt operator~() const &;
+    BigInt operator~() &&;
+    BigInt operator&(const BigInt &rhs) const &;
+    BigInt operator&(BigInt &&rhs) const &;
+    BigInt operator&(const BigInt &rhs) &&;
+    BigInt operator&(BigInt &&rhs) &&;
+    BigInt operator|(const BigInt &rhs) const &;
+    BigInt operator|(BigInt &&rhs) const &;
+    BigInt operator|(const BigInt &rhs) &&;
+    BigInt operator|(BigInt &&rhs) &&;
+    BigInt operator^(const BigInt &rhs) const &;
+    BigInt operator^(BigInt &&rhs) const &;
+    BigInt operator^(const BigInt &rhs) &&;
+    BigInt operator^(BigInt &&rhs) &&;
+    BigInt operator<<(const size_t n) const &;
+    BigInt operator<<(const size_t n) &&;
+    BigInt operator>>(const size_t n) const &;
+    BigInt operator>>(const size_t n) &&;
     explicit operator bool() const;
     bool operator==(const BigInt &rhs) const;
     std::strong_ordering operator<=>(const BigInt &rhs) const;
@@ -54,6 +73,8 @@ struct BigInt
     void subChunk(size_t i, const uint32_t val);
 
     static DivModRes divmod(const BigInt &lhs, const BigInt &rhs);
+    static BigInt toom2(const BigInt &lhs, const BigInt &rhs);
+    static BigInt toom3(const BigInt &lhs, const BigInt &rhs);
 };
 
 struct DivModRes

@@ -2,6 +2,31 @@
 #include <algorithm>
 #include <charconv>
 #include <functional>
+#include <utility>
+
+static const BigInt &Zero()
+{
+    static const BigInt val(0);
+    return val;
+}
+
+static const BigInt &NegOne()
+{
+    static const BigInt val(-1);
+    return val;
+}
+
+static const BigInt &Three()
+{
+    static const BigInt val(3);
+    return val;
+}
+
+static const BigInt &OneExa()
+{
+    static const BigInt val(1'000'000'000'000'000'000);
+    return val;
+}
 
 BigInt::BigInt() {}
 
@@ -13,12 +38,6 @@ BigInt::BigInt(int64_t num)
         data.push_back(static_cast<uint32_t>(num));
         num >>= 32;
     }
-}
-
-static const BigInt &OneExa()
-{
-    static const BigInt val(1'000'000'000'000'000'000);
-    return val;
 }
 
 BigInt::BigInt(std::string_view str)
@@ -48,6 +67,8 @@ BigInt::BigInt(std::string_view str)
 
 BigInt &BigInt::operator+=(const BigInt &rhs)
 {
+    if (this == &rhs)
+        return *this += BigInt(rhs);
     size_t i = 0;
     auto lim = data.size() + 1;
     for (; i < rhs.data.size(); ++i)
@@ -71,6 +92,8 @@ BigInt &BigInt::operator+=(const BigInt &rhs)
 
 BigInt &BigInt::operator-=(const BigInt &rhs)
 {
+    if (this == &rhs)
+        return *this = Zero();
     size_t i = 0;
     auto lim = data.size() + 1;
     for (; i < rhs.data.size(); ++i)
@@ -115,11 +138,9 @@ static void bitwise(BigInt &lhs, const BigInt &rhs, std::function<void(uint32_t 
         if (i == lhs.data.size())
             lhs.data.push_back(lhs.negative ? static_cast<uint32_t>(-1) : 0);
         auto &a = lhs.data[i];
-        auto b = i < rhs.data.size()
-                     ? rhs.data[i]
-                 : rhs.negative
-                     ? static_cast<uint32_t>(-1)
-                     : 0;
+        auto b = i < rhs.data.size() ? rhs.data[i]
+                 : rhs.negative      ? static_cast<uint32_t>(-1)
+                                     : 0;
         fn(a, b);
     }
     uint32_t x = lhs.negative ? static_cast<uint32_t>(-1) : 0;
@@ -130,6 +151,8 @@ static void bitwise(BigInt &lhs, const BigInt &rhs, std::function<void(uint32_t 
 
 BigInt &BigInt::operator&=(const BigInt &rhs)
 {
+    if (this == &rhs)
+        return *this;
     bitwise(*this, rhs,
             [](uint32_t &a, uint32_t b)
             { a &= b; });
@@ -138,6 +161,8 @@ BigInt &BigInt::operator&=(const BigInt &rhs)
 
 BigInt &BigInt::operator|=(const BigInt &rhs)
 {
+    if (this == &rhs)
+        return *this;
     bitwise(*this, rhs,
             [](uint32_t &a, uint32_t b)
             { a |= b; });
@@ -146,6 +171,8 @@ BigInt &BigInt::operator|=(const BigInt &rhs)
 
 BigInt &BigInt::operator^=(const BigInt &rhs)
 {
+    if (this == &rhs)
+        return *this = Zero();
     bitwise(*this, rhs,
             [](uint32_t &a, uint32_t b)
             { a ^= b; });
@@ -168,17 +195,12 @@ BigInt &BigInt::operator<<=(const size_t n)
     data.resize(data.size() + ceilDiv(n, 32));
     for (auto i = data.size(); i--;)
     {
-        auto x = i < off
-                     ? 0
-                 : i - off < oldSz
-                     ? data[i - off] << s
-                 : negative
-                     ? static_cast<uint32_t>(-1) << s
-                     : 0;
+        auto x = i < off           ? 0
+                 : i - off < oldSz ? data[i - off] << s
+                 : negative        ? static_cast<uint32_t>(-1) << s
+                                   : 0;
         if (s)
-            x |= i < off + 1
-                     ? 0
-                     : data[i - off - 1] >> (32 - s);
+            x |= i < off + 1 ? 0 : data[i - off - 1] >> (32 - s);
         data[i] = x;
     }
     normalize();
@@ -193,17 +215,13 @@ BigInt &BigInt::operator>>=(const size_t n)
     const auto s = n % 32;
     for (size_t i = 0; i < data.size(); ++i)
     {
-        auto x = i + off < data.size()
-                     ? data[i + off] >> s
-                 : negative
-                     ? static_cast<uint32_t>(-1) >> s
-                     : 0;
+        auto x = i + off < data.size() ? data[i + off] >> s
+                 : negative            ? static_cast<uint32_t>(-1) >> s
+                                       : 0;
         if (s)
-            x |= i + off + 1 < data.size()
-                     ? data[i + off + 1] << (32 - s)
-                 : negative
-                     ? static_cast<uint32_t>(-1) << (32 - s)
-                     : 0;
+            x |= i + off + 1 < data.size() ? data[i + off + 1] << (32 - s)
+                 : negative                ? static_cast<uint32_t>(-1) << (32 - s)
+                                           : 0;
         data[i] = x;
     }
     normalize();
@@ -234,30 +252,79 @@ BigInt BigInt::operator--(int)
     return res;
 }
 
-BigInt BigInt::operator-() const
+BigInt BigInt::operator-() const &
 {
     auto res = *this;
     res.negate();
     return res;
 }
 
-BigInt BigInt::operator+(const BigInt &rhs) const
+BigInt BigInt::operator-() &&
+{
+    negate();
+    return std::move(*this);
+}
+
+BigInt BigInt::operator+(const BigInt &rhs) const &
 {
     auto res = *this;
     return res += rhs;
 }
 
-BigInt BigInt::operator-(const BigInt &rhs) const
+BigInt BigInt::operator+(BigInt &&rhs) const &
+{
+    return std::move(rhs += *this);
+}
+
+BigInt BigInt::operator+(const BigInt &rhs) &&
+{
+    return std::move(*this += rhs);
+}
+
+BigInt BigInt::operator+(BigInt &&rhs) &&
+{
+    if (rhs.data.capacity() > data.capacity())
+        return std::move(rhs += *this);
+    return std::move(*this += rhs);
+}
+
+BigInt BigInt::operator-(const BigInt &rhs) const &
 {
     auto res = *this;
     return res -= rhs;
 }
+
+BigInt BigInt::operator-(BigInt &&rhs) const &
+{
+    rhs.negate();
+    return std::move(rhs += *this);
+}
+
+BigInt BigInt::operator-(const BigInt &rhs) &&
+{
+    return std::move(*this -= rhs);
+}
+
+BigInt BigInt::operator-(BigInt &&rhs) &&
+{
+    if (rhs.data.capacity() > data.capacity())
+        return *this - std::move(rhs);
+    return std::move(*this -= rhs);
+}
+
+static constexpr size_t Toom2Thresh = 500;
+static constexpr size_t Toom3Thresh = 2000;
 
 BigInt BigInt::operator*(const BigInt &rhs) const
 {
     auto &lhs = *this;
     if (!lhs.negative && !rhs.negative)
     {
+        const auto score = lhs.data.size() * rhs.data.size();
+        if (score > Toom3Thresh)
+            return toom3(lhs, rhs);
+        if (score > Toom2Thresh)
+            return toom2(lhs, rhs);
         BigInt res;
         for (size_t i = 0; i < lhs.data.size(); ++i)
         {
@@ -273,11 +340,9 @@ BigInt BigInt::operator*(const BigInt &rhs) const
     }
     else
     {
-        auto res = lhs.negative && rhs.negative
-                       ? -lhs * -rhs
-                   : lhs.negative
-                       ? -lhs * rhs
-                       : lhs * -rhs;
+        auto res = lhs.negative && rhs.negative ? -lhs * -rhs
+                   : lhs.negative               ? -lhs * rhs
+                                                : lhs * -rhs;
         if (lhs.negative != rhs.negative)
             res.negate();
         return res;
@@ -294,41 +359,108 @@ BigInt BigInt::operator%(const BigInt &rhs) const
     return divmod(*this, rhs).r;
 }
 
-BigInt BigInt::operator~() const
+BigInt BigInt::operator~() const &
 {
     auto res = *this;
     res.invert();
     return res;
 }
 
-BigInt BigInt::operator&(const BigInt &rhs) const
+BigInt BigInt::operator~() &&
+{
+    invert();
+    return std::move(*this);
+}
+
+BigInt BigInt::operator&(const BigInt &rhs) const &
 {
     auto res = *this;
     return res &= rhs;
 }
 
-BigInt BigInt::operator|(const BigInt &rhs) const
+BigInt BigInt::operator&(BigInt &&rhs) const &
+{
+    return std::move(rhs &= *this);
+}
+
+BigInt BigInt::operator&(const BigInt &rhs) &&
+{
+    return std::move(*this &= rhs);
+}
+
+BigInt BigInt::operator&(BigInt &&rhs) &&
+{
+    if (rhs.data.capacity() > data.capacity())
+        return std::move(rhs &= *this);
+    return std::move(*this &= rhs);
+}
+
+BigInt BigInt::operator|(const BigInt &rhs) const &
 {
     auto res = *this;
     return res |= rhs;
 }
 
-BigInt BigInt::operator^(const BigInt &rhs) const
+BigInt BigInt::operator|(BigInt &&rhs) const &
+{
+    return std::move(rhs |= *this);
+}
+
+BigInt BigInt::operator|(const BigInt &rhs) &&
+{
+    return std::move(*this |= rhs);
+}
+
+BigInt BigInt::operator|(BigInt &&rhs) &&
+{
+    if (rhs.data.capacity() > data.capacity())
+        return std::move(rhs |= *this);
+    return std::move(*this |= rhs);
+}
+
+BigInt BigInt::operator^(const BigInt &rhs) const &
 {
     auto res = *this;
     return res ^= rhs;
 }
 
-BigInt BigInt::operator<<(const size_t n) const
+BigInt BigInt::operator^(BigInt &&rhs) const &
+{
+    return std::move(rhs ^= *this);
+}
+
+BigInt BigInt::operator^(const BigInt &rhs) &&
+{
+    return std::move(*this ^= rhs);
+}
+
+BigInt BigInt::operator^(BigInt &&rhs) &&
+{
+    if (rhs.data.capacity() > data.capacity())
+        return std::move(rhs ^= *this);
+    return std::move(*this ^= rhs);
+}
+
+BigInt BigInt::operator<<(const size_t n) const &
 {
     auto res = *this;
     return res <<= n;
 }
 
-BigInt BigInt::operator>>(const size_t n) const
+BigInt BigInt::operator<<(const size_t n) &&
+{
+    return std::move(*this <<= n);
+}
+
+BigInt BigInt::operator>>(const size_t n) const &
 {
     auto res = *this;
     return res >>= n;
+}
+
+BigInt BigInt::operator>>(const size_t n) &&
+{
+    return std::move(*this >>= n);
 }
 
 BigInt::operator bool() const
@@ -344,11 +476,9 @@ bool BigInt::operator==(const BigInt &rhs) const
 std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const
 {
     auto diff = *this - rhs;
-    return !diff.negative && diff.data.size() == 0
-               ? std::strong_ordering::equal
-           : diff.negative
-               ? std::strong_ordering::less
-               : std::strong_ordering::greater;
+    return !diff.negative && diff.data.size() == 0 ? std::strong_ordering::equal
+           : diff.negative                         ? std::strong_ordering::less
+                                                   : std::strong_ordering::greater;
 }
 
 std::string BigInt::toString() const
@@ -505,9 +635,7 @@ DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
     for (size_t i = res.r.data.size(); i-- >= d.data.size();)
     {
         auto y = static_cast<uint64_t>(res.r.data[i]);
-        y |= i + 1 < res.r.data.size()
-                 ? static_cast<uint64_t>(res.r.data[i + 1]) << 32
-                 : 0;
+        y |= i + 1 < res.r.data.size() ? static_cast<uint64_t>(res.r.data[i + 1]) << 32 : 0;
         auto z = y / x;
         size_t j = i - d.data.size() + 1;
         divmodMulSub(res.r, z, d, j);
@@ -527,4 +655,111 @@ DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
     if (lhs.negative)
         res.r.negate();
     return res;
+}
+
+namespace
+{
+    struct Toom2Split
+    {
+        BigInt low, high;
+
+        Toom2Split(const BigInt &big, const size_t sz)
+        {
+            size_t i = 0;
+            size_t bigSz = big.data.size();
+            low.data.reserve(std::min(bigSz, sz));
+            for (; i < bigSz && i < sz; ++i)
+            {
+                low.data.push_back(big.data[i]);
+            }
+            high.data.reserve(bigSz - i);
+            for (; i < bigSz; ++i)
+            {
+                high.data.push_back(big.data[i]);
+            }
+        }
+    };
+}
+
+BigInt BigInt::toom2(const BigInt &lhs, const BigInt &rhs)
+{
+    const auto sz = ceilDiv(std::max(lhs.data.size(), rhs.data.size()), 2);
+    Toom2Split p(lhs, sz);
+    Toom2Split q(rhs, sz);
+    auto high = p.high * q.high;
+    auto low = p.low * q.low;
+    auto mid1 = low + high;
+    auto mid2 = (std::move(p.high) - std::move(p.low)) * (std::move(q.high) - std::move(q.low));
+    return std::move(low) +
+           ((std::move(mid1) - std::move(mid2)) << sz * 32) +
+           (std::move(high) << sz * 32 * 2);
+}
+
+namespace
+{
+    struct Toom3Mat
+    {
+        BigInt zero, one, negone, negtwo, inf;
+        Toom3Mat(const BigInt &big, const size_t sz)
+        {
+            BigInt b0, b1, b2;
+            size_t i = 0;
+            size_t bigSz = big.data.size();
+            b0.data.reserve(std::min(bigSz, sz));
+            for (; i < bigSz && i < sz; ++i)
+            {
+                b0.data.push_back(big.data[i]);
+            }
+            b1.data.reserve(std::min(bigSz - i, sz * 2 - i));
+            for (; i < bigSz && i < sz * 2; ++i)
+            {
+                b1.data.push_back(big.data[i]);
+            }
+            b2.data.reserve(bigSz - i);
+            for (; i < bigSz; ++i)
+            {
+                b2.data.push_back(big.data[i]);
+            }
+            auto tmp = b0 + b2;
+            zero = b0;
+            one = tmp + b1;
+            negone = std::move(tmp) - std::move(b1);
+            negtwo = ((negone + b2) << 1) - std::move(b0);
+            inf = std::move(b2);
+        }
+    };
+}
+
+static BigInt div2(BigInt &&big)
+{
+    if (big == NegOne())
+        big = Zero();
+    else
+        big >>= 1;
+    return std::move(big);
+}
+
+BigInt BigInt::toom3(const BigInt &lhs, const BigInt &rhs)
+{
+    const auto sz = ceilDiv(std::max(lhs.data.size(), rhs.data.size()), 3);
+    Toom3Mat p(lhs, sz);
+    Toom3Mat q(rhs, sz);
+    p.zero *= q.zero;
+    p.one *= q.one;
+    p.negone *= q.negone;
+    p.negtwo *= q.negtwo;
+    p.inf *= q.inf;
+    auto r0 = p.zero;
+    auto r4 = p.inf;
+    auto r3 = (std::move(p.negtwo) - p.one) / Three();
+    auto r1 = div2(std::move(p.one) - p.negone);
+    auto r2 = std::move(p.negone) - std::move(p.zero);
+    r3 = div2(r2 - r3) + (std::move(p.inf) << 1);
+    r2 += r1 - r4;
+    r1 -= r3;
+    return std::move(r0) +
+           (std::move(r1) << sz * 32) +
+           (std::move(r2) << sz * 32 * 2) +
+           (std::move(r3) << sz * 32 * 3) +
+           (std::move(r4) << sz * 32 * 4);
 }
