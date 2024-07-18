@@ -688,10 +688,10 @@ BigInt BigInt::toom2(const BigInt &lhs, const BigInt &rhs)
     Toom2Split q(rhs, sz);
     auto high = p.high * q.high;
     auto low = p.low * q.low;
-    auto mid1 = low + high;
-    auto mid2 = (std::move(p.high) - std::move(p.low)) * (std::move(q.high) - std::move(q.low));
+    auto mid = low + high;
+    mid -= (std::move(p.high) - std::move(p.low)) * (std::move(q.high) - std::move(q.low));
     return std::move(low) +
-           ((std::move(mid1) - std::move(mid2)) << sz * 32) +
+           (std::move(mid) << sz * 32) +
            (std::move(high) << sz * 32 * 2);
 }
 
