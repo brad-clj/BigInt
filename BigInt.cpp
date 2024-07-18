@@ -70,21 +70,26 @@ BigInt &BigInt::operator+=(const BigInt &rhs)
     if (this == &rhs)
         return *this += BigInt(rhs);
     size_t i = 0;
-    auto lim = data.size() + 1;
+    data.reserve(std::max(data.size(), rhs.data.size()) + 1);
+    auto lim = data.size();
     for (; i < rhs.data.size(); ++i)
     {
         addChunk(i, rhs.data[i]);
     }
     if (rhs.negative)
     {
-        while (i < lim ||
-               (data.back() != 1 &&
-                data.back() != static_cast<uint32_t>(-1)))
+        while (i < lim)
         {
             addChunk(i++, static_cast<uint32_t>(-1));
         }
-        negative = data.back() == static_cast<uint32_t>(-1);
-        data.pop_back();
+        if (i < data.size())
+            data.pop_back();
+        else
+        {
+            if (negative)
+                addChunk(i, static_cast<uint32_t>(-1));
+            negative = true;
+        }
     }
     normalize();
     return *this;
@@ -102,21 +107,26 @@ BigInt &BigInt::operator-=(const BigInt &rhs)
     if (this == &rhs)
         return *this = Zero();
     size_t i = 0;
-    auto lim = data.size() + 1;
+    data.reserve(std::max(data.size(), rhs.data.size()) + 1);
+    auto lim = data.size();
     for (; i < rhs.data.size(); ++i)
     {
         subChunk(i, rhs.data[i]);
     }
     if (rhs.negative)
     {
-        while (i < lim ||
-               (data.back() != 0 &&
-                data.back() != static_cast<uint32_t>(-2)))
+        while (i < lim)
         {
             subChunk(i++, static_cast<uint32_t>(-1));
         }
-        negative = data.back() == static_cast<uint32_t>(-2);
-        data.pop_back();
+        if (i < data.size())
+            data.pop_back();
+        else
+        {
+            if (!negative)
+                subChunk(i, static_cast<uint32_t>(-1));
+            negative = false;
+        }
     }
     normalize();
     return *this;
@@ -306,6 +316,11 @@ BigInt BigInt::operator-() &&
 
 BigInt BigInt::operator+(const BigInt &rhs) const &
 {
+    if (rhs.data.size() > data.size())
+    {
+        auto res = rhs;
+        return res += *this;
+    }
     auto res = *this;
     return res += rhs;
 }
@@ -329,6 +344,12 @@ BigInt BigInt::operator+(BigInt &&rhs) &&
 
 BigInt BigInt::operator-(const BigInt &rhs) const &
 {
+    if (rhs.data.size() > data.size())
+    {
+        auto res = rhs;
+        res.negate();
+        return res += *this;
+    }
     auto res = *this;
     return res -= rhs;
 }
@@ -365,6 +386,7 @@ BigInt BigInt::operator*(const BigInt &rhs) const
         if (score > Toom2Thresh)
             return toom2(lhs, rhs);
         BigInt res;
+        res.data.reserve(lhs.data.size() + rhs.data.size());
         for (size_t i = 0; i < lhs.data.size(); ++i)
         {
             for (size_t j = 0; j < rhs.data.size(); ++j)
@@ -413,6 +435,11 @@ BigInt BigInt::operator~() &&
 
 BigInt BigInt::operator&(const BigInt &rhs) const &
 {
+    if (rhs.data.size() > data.size())
+    {
+        auto res = rhs;
+        return res &= *this;
+    }
     auto res = *this;
     return res &= rhs;
 }
@@ -436,6 +463,11 @@ BigInt BigInt::operator&(BigInt &&rhs) &&
 
 BigInt BigInt::operator|(const BigInt &rhs) const &
 {
+    if (rhs.data.size() > data.size())
+    {
+        auto res = rhs;
+        return res |= *this;
+    }
     auto res = *this;
     return res |= rhs;
 }
@@ -459,6 +491,11 @@ BigInt BigInt::operator|(BigInt &&rhs) &&
 
 BigInt BigInt::operator^(const BigInt &rhs) const &
 {
+    if (rhs.data.size() > data.size())
+    {
+        auto res = rhs;
+        return res ^= *this;
+    }
     auto res = *this;
     return res ^= rhs;
 }
@@ -573,8 +610,6 @@ void BigInt::invert()
 
 void BigInt::addChunk(size_t i, const uint32_t val)
 {
-    if (val == 0)
-        return;
     while (data.size() <= i)
     {
         data.push_back(negative ? static_cast<uint32_t>(-1) : 0);
@@ -582,7 +617,7 @@ void BigInt::addChunk(size_t i, const uint32_t val)
     auto carry = (data[i++] += val) < val;
     while (carry)
     {
-        if (data.size() == i)
+        if (i == data.size())
         {
             if (negative)
             {
@@ -597,8 +632,6 @@ void BigInt::addChunk(size_t i, const uint32_t val)
 
 void BigInt::subChunk(size_t i, const uint32_t val)
 {
-    if (val == 0)
-        return;
     while (data.size() <= i)
     {
         data.push_back(negative ? static_cast<uint32_t>(-1) : 0);
@@ -607,7 +640,7 @@ void BigInt::subChunk(size_t i, const uint32_t val)
     auto borrow = (data[i++] -= val) > prev;
     while (borrow)
     {
-        if (data.size() == i)
+        if (i == data.size())
         {
             if (!negative)
             {
@@ -670,6 +703,8 @@ DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
     const int s = 32 - bitCount(d.data.back());
     res.r <<= s;
     d <<= s;
+    if (res.r.data.size() > d.data.size())
+        res.q.data.reserve(res.r.data.size() - d.data.size());
     const auto x = d.data.back();
     for (size_t i = res.r.data.size(); i-- >= d.data.size();)
     {
@@ -744,17 +779,17 @@ namespace
             BigInt b0, b1, b2;
             size_t i = 0;
             size_t bigSz = big.data.size();
-            b0.data.reserve(std::min(bigSz, sz));
+            b0.data.reserve(std::min(bigSz, sz) + 1);
             for (; i < bigSz && i < sz; ++i)
             {
                 b0.data.push_back(big.data[i]);
             }
-            b1.data.reserve(std::min(bigSz - i, sz * 2 - i));
+            b1.data.reserve(std::min(bigSz - i, sz * 2 - i) + 1);
             for (; i < bigSz && i < sz * 2; ++i)
             {
                 b1.data.push_back(big.data[i]);
             }
-            b2.data.reserve(bigSz - i);
+            b2.data.reserve(bigSz - i + 1);
             for (; i < bigSz; ++i)
             {
                 b2.data.push_back(big.data[i]);
