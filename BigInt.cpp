@@ -16,6 +16,12 @@ static const BigInt &NegOne()
     return val;
 }
 
+static const BigInt &One()
+{
+    static const BigInt val(1);
+    return val;
+}
+
 static const BigInt &Three()
 {
     static const BigInt val(3);
@@ -80,9 +86,9 @@ BigInt &BigInt::operator+=(const BigInt &rhs)
     size_t i = 0;
     data.reserve(std::max(data.size(), rhs.data.size()) + 1);
     auto lim = data.size();
-    for (; i < rhs.data.size(); ++i)
+    while (i < rhs.data.size())
     {
-        addChunk(i, rhs.data[i]);
+        addChunk(i++, rhs.data[i]);
     }
     if (rhs.negative)
     {
@@ -117,9 +123,9 @@ BigInt &BigInt::operator-=(const BigInt &rhs)
     size_t i = 0;
     data.reserve(std::max(data.size(), rhs.data.size()) + 1);
     auto lim = data.size();
-    for (; i < rhs.data.size(); ++i)
+    while (i < rhs.data.size())
     {
-        subChunk(i, rhs.data[i]);
+        subChunk(i++, rhs.data[i]);
     }
     if (rhs.negative)
     {
@@ -287,12 +293,12 @@ BigInt &BigInt::operator>>=(const size_t n)
 
 BigInt &BigInt::operator++()
 {
-    return *this += 1;
+    return *this += One();
 }
 
 BigInt &BigInt::operator--()
 {
-    return *this -= 1;
+    return *this -= One();
 }
 
 BigInt BigInt::operator++(int)
@@ -567,7 +573,7 @@ std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const
 
 std::string BigInt::toString() const
 {
-    if (*this == 0)
+    if (*this == Zero())
         return "0";
     std::string res = negative ? "-" : "";
     auto num = negative ? -*this : *this;
@@ -579,7 +585,7 @@ std::string BigInt::toString() const
         val <<= 32;
         val += r.data.size() > 0 ? r.data[0] : 0;
         digits.push_back(std::to_string(val));
-        num = q;
+        num = std::move(q);
     }
     auto first = true;
     for (size_t i = digits.size(); i--;)
