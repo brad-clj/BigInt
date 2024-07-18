@@ -32,6 +32,14 @@ BigInt::BigInt() {}
 
 BigInt::BigInt(int64_t num)
 {
+    auto tmp = num;
+    size_t count = 0;
+    while (tmp != 0 && tmp != -1)
+    {
+        ++count;
+        tmp >>= 32;
+    }
+    data.reserve(count);
     negative = num < 0;
     while (num != 0 && num != -1)
     {
@@ -678,8 +686,10 @@ static void divmodMulSub(BigInt &r, uint64_t x, const BigInt &d, size_t i)
         {
             uint64_t z = d.data[j];
             z *= y;
-            r.subChunk(i + j, static_cast<uint32_t>(z));
-            r.subChunk(i + j + 1, static_cast<uint32_t>(z >> 32));
+            if (z)
+                r.subChunk(i + j, static_cast<uint32_t>(z));
+            if (z >> 32)
+                r.subChunk(i + j + 1, static_cast<uint32_t>(z >> 32));
         }
     }
 }
@@ -703,8 +713,8 @@ DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
     const int s = 32 - bitCount(d.data.back());
     res.r <<= s;
     d <<= s;
-    if (res.r.data.size() > d.data.size())
-        res.q.data.reserve(res.r.data.size() - d.data.size());
+    if (res.r.data.size() + 1 > d.data.size())
+        res.q.data.reserve(res.r.data.size() + 1 - d.data.size());
     const auto x = d.data.back();
     for (size_t i = res.r.data.size(); i-- >= d.data.size();)
     {
@@ -718,8 +728,10 @@ DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
             --z;
             divmodAddBack(res.r, d, j);
         }
-        res.q.addChunk(j, static_cast<uint32_t>(z));
-        res.q.addChunk(j + 1, static_cast<uint32_t>(z >> 32));
+        if (z)
+            res.q.addChunk(j, static_cast<uint32_t>(z));
+        if (z >> 32)
+            res.q.addChunk(j + 1, static_cast<uint32_t>(z >> 32));
     }
     res.q.normalize();
     res.r.normalize();
