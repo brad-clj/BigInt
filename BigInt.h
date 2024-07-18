@@ -17,13 +17,18 @@ struct BigInt
     BigInt(std::string_view str);
 
     BigInt &operator+=(const BigInt &rhs);
+    BigInt &operator+=(BigInt &&rhs);
     BigInt &operator-=(const BigInt &rhs);
+    BigInt &operator-=(BigInt &&rhs);
     BigInt &operator*=(const BigInt &rhs);
     BigInt &operator/=(const BigInt &rhs);
     BigInt &operator%=(const BigInt &rhs);
     BigInt &operator&=(const BigInt &rhs);
+    BigInt &operator&=(BigInt &&rhs);
     BigInt &operator|=(const BigInt &rhs);
+    BigInt &operator|=(BigInt &&rhs);
     BigInt &operator^=(const BigInt &rhs);
+    BigInt &operator^=(BigInt &&rhs);
     BigInt &operator<<=(const size_t n);
     BigInt &operator>>=(const size_t n);
     BigInt &operator++();

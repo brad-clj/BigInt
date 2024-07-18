@@ -90,6 +90,13 @@ BigInt &BigInt::operator+=(const BigInt &rhs)
     return *this;
 }
 
+BigInt &BigInt::operator+=(BigInt &&rhs)
+{
+    if (rhs.data.capacity() > data.capacity())
+        std::swap(*this, rhs);
+    return *this += rhs;
+}
+
 BigInt &BigInt::operator-=(const BigInt &rhs)
 {
     if (this == &rhs)
@@ -113,6 +120,17 @@ BigInt &BigInt::operator-=(const BigInt &rhs)
     }
     normalize();
     return *this;
+}
+
+BigInt &BigInt::operator-=(BigInt &&rhs)
+{
+    if (rhs.data.capacity() > data.capacity())
+    {
+        std::swap(*this, rhs);
+        negate();
+        return *this += rhs;
+    }
+    return *this -= rhs;
 }
 
 BigInt &BigInt::operator*=(const BigInt &rhs)
@@ -159,6 +177,13 @@ BigInt &BigInt::operator&=(const BigInt &rhs)
     return *this;
 }
 
+BigInt &BigInt::operator&=(BigInt &&rhs)
+{
+    if (rhs.data.capacity() > data.capacity())
+        std::swap(*this, rhs);
+    return *this &= rhs;
+}
+
 BigInt &BigInt::operator|=(const BigInt &rhs)
 {
     if (this == &rhs)
@@ -169,6 +194,13 @@ BigInt &BigInt::operator|=(const BigInt &rhs)
     return *this;
 }
 
+BigInt &BigInt::operator|=(BigInt &&rhs)
+{
+    if (rhs.data.capacity() > data.capacity())
+        std::swap(*this, rhs);
+    return *this |= rhs;
+}
+
 BigInt &BigInt::operator^=(const BigInt &rhs)
 {
     if (this == &rhs)
@@ -177,6 +209,13 @@ BigInt &BigInt::operator^=(const BigInt &rhs)
             [](uint32_t &a, uint32_t b)
             { a ^= b; });
     return *this;
+}
+
+BigInt &BigInt::operator^=(BigInt &&rhs)
+{
+    if (rhs.data.capacity() > data.capacity())
+        std::swap(*this, rhs);
+    return *this ^= rhs;
 }
 
 template <typename N, typename D>
