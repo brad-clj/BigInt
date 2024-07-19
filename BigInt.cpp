@@ -406,8 +406,10 @@ BigInt BigInt::operator*(const BigInt &rhs) const
             for (size_t j = 0; j < rhs.data.size(); ++j)
             {
                 auto prod = static_cast<uint64_t>(lhs.data[i]) * rhs.data[j];
-                res.addChunk(i + j, static_cast<uint32_t>(prod));
-                res.addChunk(i + j + 1, static_cast<uint32_t>(prod >> 32));
+                if (prod)
+                    res.addChunk(i + j, static_cast<uint32_t>(prod));
+                if (prod >> 32)
+                    res.addChunk(i + j + 1, static_cast<uint32_t>(prod >> 32));
             }
         }
         res.normalize();
@@ -797,17 +799,17 @@ namespace
             BigInt b0, b1, b2;
             size_t i = 0;
             size_t bigSz = big.data.size();
-            b0.data.reserve(std::min(bigSz, sz) + 1);
+            b0.data.reserve(std::min(bigSz, sz));
             for (; i < bigSz && i < sz; ++i)
             {
                 b0.data.push_back(big.data[i]);
             }
-            b1.data.reserve(std::min(bigSz - i, sz * 2 - i) + 1);
+            b1.data.reserve(std::min(bigSz - i, sz * 2 - i));
             for (; i < bigSz && i < sz * 2; ++i)
             {
                 b1.data.push_back(big.data[i]);
             }
-            b2.data.reserve(bigSz - i + 1);
+            b2.data.reserve(bigSz - i);
             for (; i < bigSz; ++i)
             {
                 b2.data.push_back(big.data[i]);
