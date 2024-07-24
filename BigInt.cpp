@@ -700,6 +700,7 @@ static void divmodMulSub(BigInt &r, uint64_t x, const BigInt &d, size_t i)
                 r.subChunk(i + j + 1, static_cast<uint32_t>(z >> 32));
         }
     }
+    r.normalize();
 }
 
 static void divmodAddBack(BigInt &r, const BigInt &d, const size_t i)
@@ -708,6 +709,7 @@ static void divmodAddBack(BigInt &r, const BigInt &d, const size_t i)
     {
         r.addChunk(i + j, d.data[j]);
     }
+    r.normalize();
 }
 
 DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
