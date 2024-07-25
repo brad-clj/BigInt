@@ -3,6 +3,6 @@
 
 int main()
 {
-	BigInt x(42);
-	std::cout << x.toString() << '\n';
+    BigInt x(42);
+    std::cout << x.toString() << '\n';
 }
