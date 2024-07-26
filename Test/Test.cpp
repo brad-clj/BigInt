@@ -88,3 +88,31 @@ TEST(BigIntAddOps, InfixAddWorks)
     // both moved right bigger
     EXPECT_TRUE(BigInt(1864966085) + BigInt(2326226595802122250) == BigInt(2326226597667088335));
 }
+
+TEST(BigIntSubOps, SubAssignWorks)
+{
+    // same object gets set to zero
+    BigInt acc1("5887548297198228442794705066753318308");
+    acc1 -= acc1;
+    EXPECT_TRUE(acc1 == BigInt(0));
+    // borrow past lim is pop_back'ed with negative rhs
+    BigInt acc2("-288840354736677734658173097577585561594");
+    acc2 -= BigInt("-288840354736677734658173097577585561593");
+    EXPECT_TRUE(acc2 == BigInt(-1));
+    // acc3 has this replaced with acc2 as it is an rvalue and has higher capacity
+    BigInt acc3(2101752386);
+    acc3 -= std::move(acc2);
+    EXPECT_TRUE(acc3 == BigInt(2101752387));
+    // flip to positive
+    BigInt acc4(-1309982692);
+    acc4 -= BigInt(-1309982693);
+    EXPECT_TRUE(acc4 == BigInt(1));
+    // if it doesn't go negative internally sub an additional -1 at the next chunk and set negative bit back
+    BigInt acc5(3840);
+    acc5 -= BigInt(-4294963456);
+    EXPECT_TRUE(acc5 == BigInt(4294967296));
+    // repeat subChunk from small negative rhs
+    BigInt acc6("202442365473972501334578051198355947013");
+    acc6 -= BigInt(-1);
+    EXPECT_TRUE(acc6 == BigInt("202442365473972501334578051198355947014"));
+}
