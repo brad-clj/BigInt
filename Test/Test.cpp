@@ -61,6 +61,10 @@ TEST(BigIntAddOps, AddAssignWorks)
     BigInt acc3(-4293984256);
     acc3 += BigInt(-4279238656);
     EXPECT_TRUE(acc3 == BigInt(-8573222912));
+    // repeat addChunk from small negative rhs
+    BigInt acc4("275872115513967702182504904667760619899");
+    acc4 += BigInt(-1);
+    EXPECT_TRUE(acc4 == BigInt("275872115513967702182504904667760619898"));
 }
 
 TEST(BigIntAddOps, InfixAddWorks)
