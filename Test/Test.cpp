@@ -57,8 +57,30 @@ TEST(BigIntAddOps, AddAssignWorks)
     // flip to negative
     acc2 += BigInt(-43);
     EXPECT_TRUE(acc2 == BigInt(-1));
-    // if this doesn't go positive internally add an additional -1 past the back and set negative bit
+    // if it doesn't go positive internally add an additional -1 at the next chunk and set negative bit back
     BigInt acc3(-4293984256);
     acc3 += BigInt(-4279238656);
     EXPECT_TRUE(acc3 == BigInt(-8573222912));
+}
+
+TEST(BigIntAddOps, InfixAddWorks)
+{
+    // left bigger than right
+    BigInt lhs(8761890128033252764);
+    BigInt rhs(649602511);
+    EXPECT_TRUE(lhs + rhs == BigInt(8761890128682855275));
+    // right bigger than left
+    lhs = BigInt(2811295173);
+    rhs = BigInt(754751497079698868);
+    EXPECT_TRUE(lhs + rhs == BigInt(754751499890994041));
+    // right moved
+    lhs = BigInt(4402506586766798590);
+    EXPECT_TRUE(lhs + BigInt(1150734779629110894) == BigInt(5553241366395909484));
+    // left moved
+    rhs = BigInt(4398547354252609520);
+    EXPECT_TRUE(BigInt(4140871994740157499) + rhs == BigInt(8539419348992767019));
+    // both moved left bigger
+    EXPECT_TRUE(BigInt(8669068799261902808) + BigInt(2084842186) == BigInt(8669068801346744994));
+    // both moved right bigger
+    EXPECT_TRUE(BigInt(1864966085) + BigInt(2326226595802122250) == BigInt(2326226597667088335));
 }
