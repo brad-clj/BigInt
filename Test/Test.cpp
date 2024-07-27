@@ -225,9 +225,52 @@ TEST(BigIntBitwiseOps, AssignWorks)
     big3 = BigInt("240307248876206098908728029606593010510");
     big3 ^= BigInt(7974194666391867028);
     EXPECT_TRUE(big3 == BigInt("240307248876206098916701088440831940058"));
-    // const rvalue
+    // const ref rhs
+    big1 = BigInt("267432860109520355724006778154930945309");
+    BigInt big4("31323673442854937021485725293915374466");
+    big1 &= big4;
+    EXPECT_TRUE(big1 == BigInt("1415874449622596330703935739769389312"));
+    big2 = BigInt("271682288998691665259752292721579151788");
+    BigInt big5("189170453402146400413966533371091326803");
+    big2 |= big5;
+    EXPECT_TRUE(big2 == BigInt("274428455082877272582324908510143043583"));
+    big3 = BigInt("318301275946496104038527178046309019016");
+    BigInt big6("337055595021636595613890562619502717040");
+    big3 ^= big6;
+    EXPECT_TRUE(big3 == BigInt("25110339794549830978610741390052509176"));
+    // same obj
+    auto big4copy = big4;
+    big4 &= big4;
+    EXPECT_TRUE(big4 == big4copy);
+    auto big5copy = big5;
+    big5 |= big5;
+    EXPECT_TRUE(big5 == big5copy);
+    big6 ^= big6;
+    EXPECT_TRUE(big6 == BigInt(0));
+    // negative
+    EXPECT_TRUE(false);
+}
+
+TEST(BigIntBitwiseOps, NotWorks)
+{
+    // lvalue
+    BigInt big1("96558561699736801337130713178561296466");
+    EXPECT_TRUE(~big1 == BigInt("-96558561699736801337130713178561296467"));
+    // rvalue
+    EXPECT_TRUE(~BigInt("11718796510786186563890241642872635206") == BigInt("-11718796510786186563890241642872635207"));
 }
 
 TEST(BigIntBitwiseOps, InfixWorks)
 {
+    // big small
+
+    // small big
+
+    // rvalue lvalue
+
+    // lvalue rvalue
+
+    // move big small
+
+    // move small big
 }
