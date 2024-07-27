@@ -281,6 +281,11 @@ BigInt &BigInt::operator>>=(const size_t n)
 {
     if (n == 0)
         return *this;
+    if (n >= data.size() * 32)
+    {
+        data.clear();
+        return *this;
+    }
     const auto off = n / 32;
     const auto s = n % 32;
     for (size_t i = 0; i < data.size(); ++i)
