@@ -57,18 +57,19 @@ BigInt::BigInt(int64_t num)
 
 BigInt::BigInt(std::string_view str)
 {
+    constexpr auto exceptionMsg = "BigInt string_view ctor has invalid argument";
     auto neg = str.size() && str[0] == '-';
     if (neg)
         str = str.substr(1);
     if (str.size() == 0)
-        throw std::invalid_argument("BigInt string_view ctor has invalid argument");
+        throw std::invalid_argument(exceptionMsg);
     auto sub = str.substr(0, str.size() % 18);
     int64_t tmp;
     if (sub.size())
     {
         auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp);
         if (res.ec != std::errc{} || res.ptr - sub.data() != sub.size())
-            throw std::invalid_argument("BigInt string_view ctor has invalid argument");
+            throw std::invalid_argument(exceptionMsg);
         *this += tmp;
         str = str.substr(str.size() % 18);
     }
@@ -78,7 +79,7 @@ BigInt::BigInt(std::string_view str)
         sub = str.substr(0, 18);
         auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp);
         if (res.ec != std::errc{} || res.ptr - sub.data() != sub.size())
-            throw std::invalid_argument("BigInt string_view ctor has invalid argument");
+            throw std::invalid_argument(exceptionMsg);
         *this += tmp;
         str = str.substr(18);
     }
