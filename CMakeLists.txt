@@ -18,4 +18,4 @@ include(GoogleTest)
 enable_testing()
 
 add_subdirectory(BigInt)
-add_subdirectory(Test)
+add_subdirectory(BigIntTest)
