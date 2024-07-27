@@ -150,9 +150,10 @@ TEST(BigIntSubOps, SubAssignWorks)
 
 TEST(BigIntSubOps, InfixSubWorks)
 {
+    BigInt lhs, rhs;
     // left bigger than right
-    BigInt lhs(1582134291899487761);
-    BigInt rhs(2638178539);
+    lhs = BigInt(1582134291899487761);
+    rhs = BigInt(2638178539);
     EXPECT_TRUE(lhs - rhs == BigInt(1582134289261309222));
     // right bigger than left
     lhs = BigInt(169533693);
@@ -168,6 +169,11 @@ TEST(BigIntSubOps, InfixSubWorks)
     EXPECT_TRUE(BigInt(6972182057094648088) - BigInt(752277597) == BigInt(6972182056342370491));
     // both moved right bigger
     EXPECT_TRUE(BigInt(1642456746) - BigInt(6300052287118505211) == BigInt(-6300052285476048465));
+    // same obj
+    lhs = BigInt("173473284751765116448107938222259445965");
+    EXPECT_TRUE(lhs - lhs == BigInt(0));
+    lhs = BigInt("313274230291623299606732818944963080996");
+    EXPECT_TRUE(lhs - std::move(lhs) == BigInt(0));
 }
 
 TEST(BigIntSubOps, DecWorks)

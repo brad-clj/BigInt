@@ -376,14 +376,16 @@ BigInt BigInt::operator-(const BigInt &rhs) const &
         res.negate();
         return res += *this;
     }
-    // todo: same obj test
+    if (this == &rhs)
+        return Zero();
     auto res = *this;
     return res -= rhs;
 }
 
 BigInt BigInt::operator-(BigInt &&rhs) const &
 {
-    // todo: same obj test
+    if (this == &rhs)
+        return std::move(rhs = Zero());
     rhs.negate();
     return std::move(rhs += *this);
 }
