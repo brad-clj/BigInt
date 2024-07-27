@@ -578,7 +578,8 @@ BigInt::operator bool() const
 
 bool BigInt::operator==(const BigInt &rhs) const
 {
-    return negative == rhs.negative && data == rhs.data;
+    return this == &rhs ||
+           negative == rhs.negative && data == rhs.data;
 }
 
 std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const
