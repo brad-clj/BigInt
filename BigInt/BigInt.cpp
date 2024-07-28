@@ -766,20 +766,19 @@ BigInt BigInt::fromHex(std::string_view str)
                : str.substr(0, 2) == "0x" ? false
                                           : throw std::invalid_argument(exceptionMsg);
     str.remove_prefix(neg ? 3 : 2);
-    uint32_t tmp;
-    while (str.size() > 8)
+    if (str.size() == 0)
+        throw std::invalid_argument(exceptionMsg);
+    big.data.reserve(ceilDiv(str.size(), 8));
+    while (str.size())
     {
-        auto sub = str.substr(str.size() - 8);
+        uint32_t tmp;
+        auto sub = str.substr(str.size() > 8 ? str.size() - 8 : 0);
+        str.remove_suffix(sub.size());
         auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp, 16);
         if (res.ec != std::errc{} || res.ptr - sub.data() != sub.size())
             throw std::invalid_argument(exceptionMsg);
         big.data.push_back(tmp);
-        str.remove_suffix(8);
     }
-    auto res = std::from_chars(str.data(), str.data() + str.size(), tmp, 16);
-    if (res.ec != std::errc{} || res.ptr - str.data() != str.size())
-        throw std::invalid_argument(exceptionMsg);
-    big.data.push_back(tmp);
     if (neg)
         big.negate();
     big.normalize();
