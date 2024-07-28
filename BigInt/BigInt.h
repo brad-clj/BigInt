@@ -71,12 +71,14 @@ struct BigInt
     std::strong_ordering operator<=>(const BigInt &rhs) const;
 
     std::string toString() const;
+    std::string toHex() const;
     void normalize();
     void negate();
     void invert();
     void addChunk(size_t i, const uint32_t val);
     void subChunk(size_t i, const uint32_t val);
 
+    static BigInt fromHex(std::string_view str);
     static DivModRes divmod(const BigInt &lhs, const BigInt &rhs);
     static BigInt toom2(const BigInt &lhs, const BigInt &rhs);
     static BigInt toom3(const BigInt &lhs, const BigInt &rhs);

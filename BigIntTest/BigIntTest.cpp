@@ -46,6 +46,26 @@ TEST(BigIntStringCtor, ThrowsExceptionOnInvalidArgument)
     EXPECT_TRUE(BigInt("-000000000000000000000000000000000") == BigInt(0));
 }
 
+TEST(BigIntFromHex, Works)
+{
+    EXPECT_TRUE(BigInt::fromHex("0x0") == BigInt(0));
+    EXPECT_TRUE(BigInt::fromHex("-0x1") == BigInt(-1));
+    EXPECT_TRUE(BigInt::fromHex("-0x0" /* ugly but fine */) == BigInt(0));
+    EXPECT_TRUE(BigInt::fromHex("0x55c5210b8a23d4790381a6be9585f134") == BigInt("114007932356628165534711010869329129780"));
+    EXPECT_TRUE(BigInt::fromHex("-0x13c64e018b4a3d0c48c409f6903c14ce") == BigInt("-26284988848188709966956935762954425550"));
+    // no payload
+    EXPECT_THROW(BigInt::fromHex(""), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("-"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("0x"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("-0x"), std::invalid_argument);
+    // garbage payload
+    EXPECT_THROW(BigInt::fromHex("foobar"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("0xabc12341234ggabc"), std::invalid_argument);
+    // prefix 0 is fine
+    EXPECT_TRUE(BigInt::fromHex("0x000000001") == BigInt(1));
+    EXPECT_TRUE(BigInt::fromHex("-0x00000002") == BigInt(-2));
+}
+
 TEST(BigIntAddOps, AddAssignWorks)
 {
     // if using the same object for the two arguments the rhs gets copy constructed as a temporary
@@ -529,4 +549,13 @@ TEST(BigIntToString, Works)
     EXPECT_TRUE(BigInt("-310541075083408736158864660750446673005").toString() == "-310541075083408736158864660750446673005");
     EXPECT_TRUE(BigInt("-7898936895695507665301422626411256655").toString() == "-7898936895695507665301422626411256655");
     EXPECT_TRUE(BigInt("-320561019721024089963971178618185566968").toString() == "-320561019721024089963971178618185566968");
+}
+
+TEST(BigIntToHex, Works)
+{
+    EXPECT_TRUE(BigInt(0).toHex() == "0x0");
+    EXPECT_TRUE(BigInt(-1).toHex() == "-0x1");
+    EXPECT_TRUE(BigInt("116243201062464284689812801549962602295").toHex() == "0x5773a04d0e05f6e59bbeefdac80c6737");
+    EXPECT_TRUE(BigInt("-200380197899849194930046467999277295298").toHex() == "-0x96bfd284dbb62aad29ecf18fe5e0a6c2");
+    EXPECT_TRUE(BigInt("241293769526998316206544976813421387230").toHex() == "0xb5877d57408b8ccfc2acab0854c65dde");
 }

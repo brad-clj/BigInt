@@ -59,7 +59,7 @@ def gen_line(low, high):
     if y_neg:
         y = -y
     res = {"+": add, "-": sub, "*": mul, "/": c_div, "%": c_mod}[op](x, y)
-    return f"{x} {op} {y} {res}"
+    return f"{hex(x)} {op} {hex(y)} {hex(res)}"
 
 
 def to_stdout(count, low, high):
@@ -74,7 +74,6 @@ def main():
     parser.add_argument("low", type=int)
     parser.add_argument("high", type=int)
     args = parser.parse_args()
-    sys.set_int_max_str_digits(10000)
     start = time.perf_counter()
     with io.StringIO() as input:
         with contextlib.redirect_stdout(input):

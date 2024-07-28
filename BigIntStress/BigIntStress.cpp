@@ -7,53 +7,53 @@
 
 int main()
 {
-    using OpFn = std::function<bool(std::string_view x,
-                                    std::string_view y,
-                                    std::string_view res)>;
+    using OpFn = std::function<bool(const BigInt &x,
+                                    const BigInt &y,
+                                    const BigInt &res)>;
     std::unordered_map<std::string, OpFn> ops{
         {
             "+",
-            [](std::string_view x,
-               std::string_view y,
-               std::string_view res)
+            [](const BigInt &x,
+               const BigInt &y,
+               const BigInt &res)
             {
-                return BigInt(x) + BigInt(y) == BigInt(res);
+                return x + y == res;
             },
         },
         {
             "-",
-            [](std::string_view x,
-               std::string_view y,
-               std::string_view res)
+            [](const BigInt &x,
+               const BigInt &y,
+               const BigInt &res)
             {
-                return BigInt(x) - BigInt(y) == BigInt(res);
+                return x - y == res;
             },
         },
         {
             "*",
-            [](std::string_view x,
-               std::string_view y,
-               std::string_view res)
+            [](const BigInt &x,
+               const BigInt &y,
+               const BigInt &res)
             {
-                return BigInt(x) * BigInt(y) == BigInt(res);
+                return x * y == res;
             },
         },
         {
             "/",
-            [](std::string_view x,
-               std::string_view y,
-               std::string_view res)
+            [](const BigInt &x,
+               const BigInt &y,
+               const BigInt &res)
             {
-                return BigInt(x) / BigInt(y) == BigInt(res);
+                return x / y == res;
             },
         },
         {
             "%",
-            [](std::string_view x,
-               std::string_view y,
-               std::string_view res)
+            [](const BigInt &x,
+               const BigInt &y,
+               const BigInt &res)
             {
-                return BigInt(x) % BigInt(y) == BigInt(res);
+                return x % y == res;
             },
         },
     };
@@ -61,12 +61,14 @@ int main()
     std::string x, op, y, res;
     while (std::cin >> x >> op >> y >> res)
     {
-        if (!ops[op](x, y, res))
+        if (!ops[op](BigInt::fromHex(x),
+                     BigInt::fromHex(y),
+                     BigInt::fromHex(res)))
         {
             fail = true;
             std::cerr << x << ' '
                       << op << ' '
-                      << y << " != "
+                      << y << ' '
                       << res << '\n';
         }
     }

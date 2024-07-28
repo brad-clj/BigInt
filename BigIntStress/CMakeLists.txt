@@ -8,4 +8,4 @@ if (WIN32)
     set(python py -3)
 endif()
 add_test(NAME BigIntStress.py
-         COMMAND ${python} BigIntStress.py ./BigIntStress 16667 60 100)
+         COMMAND ${python} BigIntStress.py ./BigIntStress 50000 60 100)
