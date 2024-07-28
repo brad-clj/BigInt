@@ -4,6 +4,7 @@ import io
 import random
 import subprocess
 import sys
+import time
 
 
 def add(x, y):
@@ -74,10 +75,15 @@ def main():
     parser.add_argument("high", type=int)
     args = parser.parse_args()
     sys.set_int_max_str_digits(10000)
+    start = time.perf_counter()
     with io.StringIO() as input:
         with contextlib.redirect_stdout(input):
             to_stdout(args.count, args.low, args.high)
+        py_done = time.perf_counter()
+        print(f"Python took {py_done - start} seconds")
         completed = subprocess.run([args.exec], input=input.getvalue(), text=True)
+        bigint_done = time.perf_counter()
+        print(f"BigIntStress took {bigint_done - py_done} seconds")
     sys.exit(completed.returncode)
 
 
