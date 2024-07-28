@@ -19,3 +19,4 @@ enable_testing()
 
 add_subdirectory(BigInt)
 add_subdirectory(BigIntTest)
+add_subdirectory(BigIntStress)
