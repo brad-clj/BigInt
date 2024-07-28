@@ -48,8 +48,8 @@ def gen_line(low, high):
     x_neg = random.choice((True, False))
     y_neg = random.choice((True, False))
     if op in {"/", "%"}:
-        (x, sz) = get_num(low, high)
-        y = get_num(sz + 1, high + 1)[0]
+        (y, sz) = get_num(low, high)
+        x = get_num(sz + 1, high + 1)[0]
     else:
         x = get_num(low, high)[0]
         y = get_num(low, high)[0]
