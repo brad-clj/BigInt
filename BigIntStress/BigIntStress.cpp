@@ -67,7 +67,7 @@ int main()
             std::cerr << x << ' '
                       << op << ' '
                       << y << " != "
-                      << res << "\n";
+                      << res << '\n';
         }
     }
     if (fail)

@@ -1,6 +1,9 @@
 import argparse
 import contextlib
+import io
 import random
+import subprocess
+import sys
 
 
 def add(x, y):
@@ -58,24 +61,24 @@ def gen_line(low, high):
     return f"{x} {op} {y} {res}"
 
 
-def to_stdout(count):
+def to_stdout(count, low, high):
     for _ in range(count):
-        print(gen_line(1, 100))
-
-
-def to_file(count):
-    with open("generated.txt", "w") as file:
-        with contextlib.redirect_stdout(file):
-            to_stdout(count)
+        print(gen_line(low, high))
 
 
 def main():
     parser = argparse.ArgumentParser()
+    parser.add_argument("exec")
     parser.add_argument("count", type=int)
     parser.add_argument("low", type=int)
     parser.add_argument("high", type=int)
     args = parser.parse_args()
-    print(args)
+    sys.set_int_max_str_digits(10000)
+    with io.StringIO() as input:
+        with contextlib.redirect_stdout(input):
+            to_stdout(args.count, args.low, args.high)
+        completed = subprocess.run([args.exec], input=input.getvalue(), text=True)
+    sys.exit(completed.returncode)
 
 
 if __name__ == "__main__":
