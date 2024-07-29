@@ -9,8 +9,8 @@ struct DivModRes;
 
 struct BigInt
 {
-    std::vector<uint32_t> data;
-    bool negative = false;
+    std::vector<uint32_t> chunks;
+    bool isNeg = false;
 
     BigInt();
     BigInt(int64_t num);
