@@ -583,12 +583,31 @@ bool BigInt::operator==(const BigInt &rhs) const
            (negative == rhs.negative && data == rhs.data);
 }
 
-std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const
+static std::strong_ordering cmp(const BigInt &diff)
 {
-    auto diff = *this - rhs;
     return !diff.negative && diff.data.size() == 0 ? std::strong_ordering::equal
            : diff.negative                         ? std::strong_ordering::less
                                                    : std::strong_ordering::greater;
+}
+
+std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const &
+{
+    return cmp(*this - rhs);
+}
+
+std::strong_ordering BigInt::operator<=>(const BigInt &rhs) &&
+{
+    return cmp(std::move(*this) - rhs);
+}
+
+std::strong_ordering BigInt::operator<=>(BigInt &&rhs) const &
+{
+    return cmp(*this - std::move(rhs));
+}
+
+std::strong_ordering BigInt::operator<=>(BigInt &&rhs) &&
+{
+    return cmp(std::move(*this) - std::move(rhs));
 }
 
 std::string BigInt::toString() const

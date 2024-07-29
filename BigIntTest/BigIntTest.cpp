@@ -535,6 +535,8 @@ TEST(BigIntCmpOps, CmpWorks)
     EXPECT_FALSE(big > big);
     EXPECT_TRUE(big <= big);
     EXPECT_TRUE(big >= big);
+    // todo: rvalue overloads
+    EXPECT_TRUE(false);
 }
 
 TEST(BigIntToString, Works)

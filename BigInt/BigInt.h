@@ -68,7 +68,10 @@ struct BigInt
     BigInt &operator>>(const size_t n) &&;
     explicit operator bool() const;
     bool operator==(const BigInt &rhs) const;
-    std::strong_ordering operator<=>(const BigInt &rhs) const;
+    std::strong_ordering operator<=>(const BigInt &rhs) const &;
+    std::strong_ordering operator<=>(BigInt &&rhs) const &;
+    std::strong_ordering operator<=>(const BigInt &rhs) &&;
+    std::strong_ordering operator<=>(BigInt &&rhs) &&;
 
     std::string toString() const;
     std::string toHex() const;
