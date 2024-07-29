@@ -335,10 +335,10 @@ BigInt BigInt::operator-() const &
     return res;
 }
 
-BigInt &BigInt::operator-() &&
+BigInt &&BigInt::operator-() &&
 {
     negate();
-    return *this;
+    return std::move(*this);
 }
 
 BigInt BigInt::operator+(const BigInt &rhs) const &
@@ -352,21 +352,21 @@ BigInt BigInt::operator+(const BigInt &rhs) const &
     return res += rhs;
 }
 
-BigInt &BigInt::operator+(BigInt &&rhs) const &
+BigInt &&BigInt::operator+(BigInt &&rhs) const &
 {
-    return rhs += *this;
+    return std::move(rhs += *this);
 }
 
-BigInt &BigInt::operator+(const BigInt &rhs) &&
+BigInt &&BigInt::operator+(const BigInt &rhs) &&
 {
-    return *this += rhs;
+    return std::move(*this += rhs);
 }
 
-BigInt &BigInt::operator+(BigInt &&rhs) &&
+BigInt &&BigInt::operator+(BigInt &&rhs) &&
 {
     if (rhs.chunks.capacity() > chunks.capacity())
-        return rhs += *this;
-    return *this += rhs;
+        return std::move(rhs += *this);
+    return std::move(*this += rhs);
 }
 
 BigInt BigInt::operator-(const BigInt &rhs) const &
@@ -383,24 +383,24 @@ BigInt BigInt::operator-(const BigInt &rhs) const &
     return res -= rhs;
 }
 
-BigInt &BigInt::operator-(BigInt &&rhs) const &
+BigInt &&BigInt::operator-(BigInt &&rhs) const &
 {
     if (this == &rhs)
-        return rhs = Zero();
+        return std::move(rhs = Zero());
     rhs.negate();
-    return rhs += *this;
+    return std::move(rhs += *this);
 }
 
-BigInt &BigInt::operator-(const BigInt &rhs) &&
+BigInt &&BigInt::operator-(const BigInt &rhs) &&
 {
-    return *this -= rhs;
+    return std::move(*this -= rhs);
 }
 
-BigInt &BigInt::operator-(BigInt &&rhs) &&
+BigInt &&BigInt::operator-(BigInt &&rhs) &&
 {
     if (rhs.chunks.capacity() > chunks.capacity())
         return *this - std::move(rhs);
-    return *this -= rhs;
+    return std::move(*this -= rhs);
 }
 
 static constexpr size_t Toom2Thresh = 500;
@@ -460,10 +460,10 @@ BigInt BigInt::operator~() const &
     return res;
 }
 
-BigInt &BigInt::operator~() &&
+BigInt &&BigInt::operator~() &&
 {
     invert();
-    return *this;
+    return std::move(*this);
 }
 
 BigInt BigInt::operator&(const BigInt &rhs) const &
@@ -477,21 +477,21 @@ BigInt BigInt::operator&(const BigInt &rhs) const &
     return res &= rhs;
 }
 
-BigInt &BigInt::operator&(BigInt &&rhs) const &
+BigInt &&BigInt::operator&(BigInt &&rhs) const &
 {
-    return rhs &= *this;
+    return std::move(rhs &= *this);
 }
 
-BigInt &BigInt::operator&(const BigInt &rhs) &&
+BigInt &&BigInt::operator&(const BigInt &rhs) &&
 {
-    return *this &= rhs;
+    return std::move(*this &= rhs);
 }
 
-BigInt &BigInt::operator&(BigInt &&rhs) &&
+BigInt &&BigInt::operator&(BigInt &&rhs) &&
 {
     if (rhs.chunks.capacity() > chunks.capacity())
-        return rhs &= *this;
-    return *this &= rhs;
+        return std::move(rhs &= *this);
+    return std::move(*this &= rhs);
 }
 
 BigInt BigInt::operator|(const BigInt &rhs) const &
@@ -505,21 +505,21 @@ BigInt BigInt::operator|(const BigInt &rhs) const &
     return res |= rhs;
 }
 
-BigInt &BigInt::operator|(BigInt &&rhs) const &
+BigInt &&BigInt::operator|(BigInt &&rhs) const &
 {
-    return rhs |= *this;
+    return std::move(rhs |= *this);
 }
 
-BigInt &BigInt::operator|(const BigInt &rhs) &&
+BigInt &&BigInt::operator|(const BigInt &rhs) &&
 {
-    return *this |= rhs;
+    return std::move(*this |= rhs);
 }
 
-BigInt &BigInt::operator|(BigInt &&rhs) &&
+BigInt &&BigInt::operator|(BigInt &&rhs) &&
 {
     if (rhs.chunks.capacity() > chunks.capacity())
-        return rhs |= *this;
-    return *this |= rhs;
+        return std::move(rhs |= *this);
+    return std::move(*this |= rhs);
 }
 
 BigInt BigInt::operator^(const BigInt &rhs) const &
@@ -533,21 +533,21 @@ BigInt BigInt::operator^(const BigInt &rhs) const &
     return res ^= rhs;
 }
 
-BigInt &BigInt::operator^(BigInt &&rhs) const &
+BigInt &&BigInt::operator^(BigInt &&rhs) const &
 {
-    return rhs ^= *this;
+    return std::move(rhs ^= *this);
 }
 
-BigInt &BigInt::operator^(const BigInt &rhs) &&
+BigInt &&BigInt::operator^(const BigInt &rhs) &&
 {
-    return *this ^= rhs;
+    return std::move(*this ^= rhs);
 }
 
-BigInt &BigInt::operator^(BigInt &&rhs) &&
+BigInt &&BigInt::operator^(BigInt &&rhs) &&
 {
     if (rhs.chunks.capacity() > chunks.capacity())
-        return rhs ^= *this;
-    return *this ^= rhs;
+        return std::move(rhs ^= *this);
+    return std::move(*this ^= rhs);
 }
 
 BigInt BigInt::operator<<(const size_t n) const &
@@ -556,9 +556,9 @@ BigInt BigInt::operator<<(const size_t n) const &
     return res <<= n;
 }
 
-BigInt &BigInt::operator<<(const size_t n) &&
+BigInt &&BigInt::operator<<(const size_t n) &&
 {
-    return *this <<= n;
+    return std::move(*this <<= n);
 }
 
 BigInt BigInt::operator>>(const size_t n) const &
@@ -567,9 +567,9 @@ BigInt BigInt::operator>>(const size_t n) const &
     return res >>= n;
 }
 
-BigInt &BigInt::operator>>(const size_t n) &&
+BigInt &&BigInt::operator>>(const size_t n) &&
 {
-    return *this >>= n;
+    return std::move(*this >>= n);
 }
 
 BigInt::operator bool() const
