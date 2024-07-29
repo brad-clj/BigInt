@@ -403,8 +403,8 @@ BigInt &&BigInt::operator-(BigInt &&rhs) &&
     return std::move(*this -= rhs);
 }
 
-static constexpr size_t Toom2Thresh = 500;
-static constexpr size_t Toom3Thresh = 2000;
+static constexpr size_t Toom2Thresh = 300;
+static constexpr size_t Toom3Thresh = 800;
 
 BigInt BigInt::operator*(const BigInt &rhs) const
 {
@@ -918,13 +918,13 @@ namespace
     };
 }
 
-static BigInt &div2(BigInt &&big)
+static BigInt &&div2(BigInt &&big)
 {
     if (big == NegOne())
         big = Zero();
     else
         big >>= 1;
-    return big;
+    return std::move(big);
 }
 
 BigInt BigInt::toom3(const BigInt &lhs, const BigInt &rhs)
@@ -940,7 +940,7 @@ BigInt BigInt::toom3(const BigInt &lhs, const BigInt &rhs)
     auto r0 = p.zero;
     auto r4 = p.inf;
     auto r3 = (std::move(p.negtwo) - p.one) / Three();
-    auto r1 = div2(std::move(std::move(p.one) - p.negone));
+    auto r1 = div2(std::move(p.one) - p.negone);
     auto r2 = std::move(p.negone) - std::move(p.zero);
     r3 = div2(r2 - r3) + (std::move(p.inf) << 1);
     r2 += r1 - r4;
