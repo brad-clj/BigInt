@@ -11,7 +11,6 @@ else()
     add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-
 include(FetchContent)
 FetchContent_Declare(
     googletest
