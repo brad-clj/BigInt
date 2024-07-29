@@ -68,7 +68,7 @@ BigInt::BigInt(std::string_view str)
     if (sub.size())
     {
         auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp);
-        if (res.ec != std::errc{} || static_cast<size_t>(res.ptr - sub.data()) != sub.size())
+        if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
             throw std::invalid_argument(exceptionMsg);
         *this += tmp;
         str = str.substr(str.size() % 18);
@@ -78,7 +78,7 @@ BigInt::BigInt(std::string_view str)
         *this *= OneExa();
         sub = str.substr(0, 18);
         auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp);
-        if (res.ec != std::errc{} || static_cast<size_t>(res.ptr - sub.data()) != sub.size())
+        if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
             throw std::invalid_argument(exceptionMsg);
         *this += tmp;
         str = str.substr(18);
@@ -775,7 +775,7 @@ BigInt BigInt::fromHex(std::string_view str)
         auto sub = str.substr(str.size() > 8 ? str.size() - 8 : 0);
         str.remove_suffix(sub.size());
         auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp, 16);
-        if (res.ec != std::errc{} || static_cast<size_t>(res.ptr - sub.data()) != sub.size())
+        if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
             throw std::invalid_argument(exceptionMsg);
         big.data.push_back(tmp);
     }
