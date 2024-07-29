@@ -595,14 +595,14 @@ std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const &
     return cmp(*this - rhs);
 }
 
-std::strong_ordering BigInt::operator<=>(const BigInt &rhs) &&
-{
-    return cmp(std::move(*this) - rhs);
-}
-
 std::strong_ordering BigInt::operator<=>(BigInt &&rhs) const &
 {
     return cmp(*this - std::move(rhs));
+}
+
+std::strong_ordering BigInt::operator<=>(const BigInt &rhs) &&
+{
+    return cmp(std::move(*this) - rhs);
 }
 
 std::strong_ordering BigInt::operator<=>(BigInt &&rhs) &&
