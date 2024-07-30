@@ -346,10 +346,12 @@ BigInt BigInt::operator+(const BigInt &rhs) const &
     if (rhs.chunks.size() > chunks.size())
     {
         auto res = rhs;
-        return res += *this;
+        res += *this;
+        return res;
     }
     auto res = *this;
-    return res += rhs;
+    res += rhs;
+    return res;
 }
 
 BigInt &&BigInt::operator+(BigInt &&rhs) const &
@@ -375,12 +377,14 @@ BigInt BigInt::operator-(const BigInt &rhs) const &
     {
         auto res = rhs;
         res.negate();
-        return res += *this;
+        res += *this;
+        return res;
     }
     if (this == &rhs)
         return Zero();
     auto res = *this;
-    return res -= rhs;
+    res -= rhs;
+    return res;
 }
 
 BigInt &&BigInt::operator-(BigInt &&rhs) const &
@@ -471,10 +475,12 @@ BigInt BigInt::operator&(const BigInt &rhs) const &
     if (rhs.chunks.size() > chunks.size())
     {
         auto res = rhs;
-        return res &= *this;
+        res &= *this;
+        return res;
     }
     auto res = *this;
-    return res &= rhs;
+    res &= rhs;
+    return res;
 }
 
 BigInt &&BigInt::operator&(BigInt &&rhs) const &
@@ -499,10 +505,12 @@ BigInt BigInt::operator|(const BigInt &rhs) const &
     if (rhs.chunks.size() > chunks.size())
     {
         auto res = rhs;
-        return res |= *this;
+        res |= *this;
+        return res;
     }
     auto res = *this;
-    return res |= rhs;
+    res |= rhs;
+    return res;
 }
 
 BigInt &&BigInt::operator|(BigInt &&rhs) const &
@@ -527,10 +535,12 @@ BigInt BigInt::operator^(const BigInt &rhs) const &
     if (rhs.chunks.size() > chunks.size())
     {
         auto res = rhs;
-        return res ^= *this;
+        res ^= *this;
+        return res;
     }
     auto res = *this;
-    return res ^= rhs;
+    res ^= rhs;
+    return res;
 }
 
 BigInt &&BigInt::operator^(BigInt &&rhs) const &
@@ -553,7 +563,8 @@ BigInt &&BigInt::operator^(BigInt &&rhs) &&
 BigInt BigInt::operator<<(const size_t n) const &
 {
     auto res = *this;
-    return res <<= n;
+    res <<= n;
+    return res;
 }
 
 BigInt &&BigInt::operator<<(const size_t n) &&
@@ -564,7 +575,8 @@ BigInt &&BigInt::operator<<(const size_t n) &&
 BigInt BigInt::operator>>(const size_t n) const &
 {
     auto res = *this;
-    return res >>= n;
+    res >>= n;
+    return res;
 }
 
 BigInt &&BigInt::operator>>(const size_t n) &&
@@ -888,6 +900,7 @@ namespace
     struct Toom3Mat
     {
         BigInt zero, one, negone, negtwo, inf;
+
         Toom3Mat(const BigInt &big, const size_t sz)
         {
             BigInt b0, b1, b2;
