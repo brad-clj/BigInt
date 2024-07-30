@@ -1,5 +1,6 @@
 #include "BigInt.h"
 #include <algorithm>
+#include <array>
 #include <charconv>
 #include <functional>
 #include <stdexcept>
@@ -407,6 +408,124 @@ BigInt &&BigInt::operator-(BigInt &&rhs) &&
     return std::move(*this -= rhs);
 }
 
+struct Toom2Split
+{
+    BigInt low, high;
+
+    Toom2Split(const BigInt &big, const size_t sz)
+    {
+        size_t i = 0;
+        size_t bigSz = big.chunks.size();
+        low.chunks.reserve(std::min(bigSz, sz));
+        for (; i < bigSz && i < sz; ++i)
+        {
+            low.chunks.push_back(big.chunks[i]);
+        }
+        high.chunks.reserve(bigSz - i);
+        for (; i < bigSz; ++i)
+        {
+            high.chunks.push_back(big.chunks[i]);
+        }
+    }
+};
+
+static BigInt toom2(const BigInt &lhs, const BigInt &rhs)
+{
+    const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 2);
+    Toom2Split p(lhs, sz);
+    Toom2Split q(rhs, sz);
+    std::array<BigInt, 3> r;
+    r[0] = p.low * q.low;
+    r[2] = p.high * q.high;
+    r[1] = r[0] + r[2];
+    r[1] -= (std::move(p.high) - std::move(p.low)) * (std::move(q.high) - std::move(q.low));
+    BigInt res;
+    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size());
+    for (size_t i = 0; i < r.size(); ++i)
+    {
+        for (size_t j = 0; j < r[i].chunks.size(); ++j)
+        {
+            res.addChunkFast(sz * i + j, r[i].chunks[j]);
+        }
+    }
+    res.normalize();
+    return res;
+}
+
+struct Toom3Mat
+{
+    BigInt zero, one, negone, negtwo, inf;
+
+    Toom3Mat(const BigInt &big, const size_t sz)
+    {
+        BigInt b0, b1, b2;
+        size_t i = 0;
+        size_t bigSz = big.chunks.size();
+        b0.chunks.reserve(std::min(bigSz, sz));
+        for (; i < bigSz && i < sz; ++i)
+        {
+            b0.chunks.push_back(big.chunks[i]);
+        }
+        b1.chunks.reserve(std::min(bigSz - i, sz * 2 - i));
+        for (; i < bigSz && i < sz * 2; ++i)
+        {
+            b1.chunks.push_back(big.chunks[i]);
+        }
+        b2.chunks.reserve(bigSz - i);
+        for (; i < bigSz; ++i)
+        {
+            b2.chunks.push_back(big.chunks[i]);
+        }
+        auto tmp = b0 + b2;
+        zero = b0;
+        one = tmp + b1;
+        negone = std::move(tmp) - std::move(b1);
+        negtwo = ((negone + b2) << 1) - std::move(b0);
+        inf = std::move(b2);
+    }
+};
+
+static BigInt &&div2(BigInt &&big)
+{
+    if (big == NegOne())
+        big = Zero();
+    else
+        big >>= 1;
+    return std::move(big);
+}
+
+static BigInt toom3(const BigInt &lhs, const BigInt &rhs)
+{
+    const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 3);
+    Toom3Mat p(lhs, sz);
+    Toom3Mat q(rhs, sz);
+    p.zero *= q.zero;
+    p.one *= q.one;
+    p.negone *= q.negone;
+    p.negtwo *= q.negtwo;
+    p.inf *= q.inf;
+    std::array<BigInt, 5> r;
+    r[0] = p.zero;
+    r[4] = p.inf;
+    r[3] = (std::move(p.negtwo) - p.one) / Three();
+    r[1] = div2(std::move(p.one) - p.negone);
+    r[2] = std::move(p.negone) - std::move(p.zero);
+    r[3] = div2(r[2] - r[3]) + (std::move(p.inf) << 1);
+    r[2] += r[1] - r[4];
+    r[1] -= r[3];
+    BigInt res;
+    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size());
+    for (size_t i = 0; i < r.size(); ++i)
+    {
+        for (size_t j = 0; j < r[i].chunks.size(); ++j)
+        {
+            res.addChunkFast(sz * i + j, r[i].chunks[j]);
+        }
+    }
+    res.normalize();
+    return res;
+}
+
 static constexpr size_t Toom2Thresh = 300;
 static constexpr size_t Toom3Thresh = 800;
 
@@ -421,16 +540,16 @@ BigInt BigInt::operator*(const BigInt &rhs) const
         if (score > Toom2Thresh)
             return toom2(lhs, rhs);
         BigInt res;
-        res.chunks.reserve(lhs.chunks.size() + rhs.chunks.size());
+        res.chunks.resize(lhs.chunks.size() + rhs.chunks.size());
         for (size_t i = 0; i < lhs.chunks.size(); ++i)
         {
             for (size_t j = 0; j < rhs.chunks.size(); ++j)
             {
                 auto prod = static_cast<uint64_t>(lhs.chunks[i]) * rhs.chunks[j];
                 if (prod)
-                    res.addChunk(i + j, static_cast<uint32_t>(prod));
+                    res.addChunkFast(i + j, static_cast<uint32_t>(prod));
                 if (prod >> 32)
-                    res.addChunk(i + j + 1, static_cast<uint32_t>(prod >> 32));
+                    res.addChunkFast(i + j + 1, static_cast<uint32_t>(prod >> 32));
             }
         }
         res.normalize();
@@ -735,6 +854,15 @@ void BigInt::addChunk(size_t i, const uint32_t val)
     }
 }
 
+void BigInt::addChunkFast(size_t i, const uint32_t val)
+{
+    auto hasCarry = (chunks[i++] += val) < val;
+    while (hasCarry)
+    {
+        hasCarry = ++chunks[i++] == 0;
+    }
+}
+
 void BigInt::subChunk(size_t i, const uint32_t val)
 {
     while (chunks.size() <= i)
@@ -867,112 +995,4 @@ DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
     if (lhs.isNeg)
         res.r.negate();
     return res;
-}
-
-namespace
-{
-    struct Toom2Split
-    {
-        BigInt low, high;
-
-        Toom2Split(const BigInt &big, const size_t sz)
-        {
-            size_t i = 0;
-            size_t bigSz = big.chunks.size();
-            low.chunks.reserve(std::min(bigSz, sz));
-            for (; i < bigSz && i < sz; ++i)
-            {
-                low.chunks.push_back(big.chunks[i]);
-            }
-            high.chunks.reserve(bigSz - i);
-            for (; i < bigSz; ++i)
-            {
-                high.chunks.push_back(big.chunks[i]);
-            }
-        }
-    };
-}
-
-BigInt BigInt::toom2(const BigInt &lhs, const BigInt &rhs)
-{
-    const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 2);
-    Toom2Split p(lhs, sz);
-    Toom2Split q(rhs, sz);
-    auto high = p.high * q.high;
-    auto low = p.low * q.low;
-    auto mid = low + high;
-    mid -= (std::move(p.high) - std::move(p.low)) * (std::move(q.high) - std::move(q.low));
-    return std::move(low) +
-           (std::move(mid) << sz * 32) +
-           (std::move(high) << sz * 32 * 2);
-}
-
-namespace
-{
-    struct Toom3Mat
-    {
-        BigInt zero, one, negone, negtwo, inf;
-
-        Toom3Mat(const BigInt &big, const size_t sz)
-        {
-            BigInt b0, b1, b2;
-            size_t i = 0;
-            size_t bigSz = big.chunks.size();
-            b0.chunks.reserve(std::min(bigSz, sz));
-            for (; i < bigSz && i < sz; ++i)
-            {
-                b0.chunks.push_back(big.chunks[i]);
-            }
-            b1.chunks.reserve(std::min(bigSz - i, sz * 2 - i));
-            for (; i < bigSz && i < sz * 2; ++i)
-            {
-                b1.chunks.push_back(big.chunks[i]);
-            }
-            b2.chunks.reserve(bigSz - i);
-            for (; i < bigSz; ++i)
-            {
-                b2.chunks.push_back(big.chunks[i]);
-            }
-            auto tmp = b0 + b2;
-            zero = b0;
-            one = tmp + b1;
-            negone = std::move(tmp) - std::move(b1);
-            negtwo = ((negone + b2) << 1) - std::move(b0);
-            inf = std::move(b2);
-        }
-    };
-}
-
-static BigInt &&div2(BigInt &&big)
-{
-    if (big == NegOne())
-        big = Zero();
-    else
-        big >>= 1;
-    return std::move(big);
-}
-
-BigInt BigInt::toom3(const BigInt &lhs, const BigInt &rhs)
-{
-    const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 3);
-    Toom3Mat p(lhs, sz);
-    Toom3Mat q(rhs, sz);
-    p.zero *= q.zero;
-    p.one *= q.one;
-    p.negone *= q.negone;
-    p.negtwo *= q.negtwo;
-    p.inf *= q.inf;
-    auto r0 = p.zero;
-    auto r4 = p.inf;
-    auto r3 = (std::move(p.negtwo) - p.one) / Three();
-    auto r1 = div2(std::move(p.one) - p.negone);
-    auto r2 = std::move(p.negone) - std::move(p.zero);
-    r3 = div2(r2 - r3) + (std::move(p.inf) << 1);
-    r2 += r1 - r4;
-    r1 -= r3;
-    return std::move(r0) +
-           (std::move(r1) << sz * 32) +
-           (std::move(r2) << sz * 32 * 2) +
-           (std::move(r3) << sz * 32 * 3) +
-           (std::move(r4) << sz * 32 * 4);
 }
