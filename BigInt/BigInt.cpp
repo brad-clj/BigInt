@@ -746,6 +746,33 @@ void BigInt::subChunk(size_t i, const uint32_t val)
     }
 }
 
+BigInt BigInt::fromHex(std::string_view str)
+{
+    constexpr auto exceptionMsg = "BigInt fromHex has invalid argument";
+    BigInt big;
+    auto strIsNeg = str.substr(0, 3) == "-0x"  ? true
+                    : str.substr(0, 2) == "0x" ? false
+                                               : throw std::invalid_argument(exceptionMsg);
+    str.remove_prefix(strIsNeg ? 3 : 2);
+    if (str.size() == 0)
+        throw std::invalid_argument(exceptionMsg);
+    big.chunks.reserve(ceilDiv(str.size(), 8));
+    while (str.size())
+    {
+        uint32_t tmp;
+        auto sub = str.substr(str.size() > 8 ? str.size() - 8 : 0);
+        str.remove_suffix(sub.size());
+        auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp, 16);
+        if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
+            throw std::invalid_argument(exceptionMsg);
+        big.chunks.push_back(tmp);
+    }
+    if (strIsNeg)
+        big.negate();
+    big.normalize();
+    return big;
+}
+
 static int bitCount(uint32_t x)
 {
     if (x == 0)
@@ -787,33 +814,6 @@ static void divmodAddBack(BigInt &r, const BigInt &d, const size_t i)
         r.addChunk(i + j, d.chunks[j]);
     }
     r.normalize();
-}
-
-BigInt BigInt::fromHex(std::string_view str)
-{
-    constexpr auto exceptionMsg = "BigInt fromHex has invalid argument";
-    BigInt big;
-    auto strIsNeg = str.substr(0, 3) == "-0x"  ? true
-                    : str.substr(0, 2) == "0x" ? false
-                                               : throw std::invalid_argument(exceptionMsg);
-    str.remove_prefix(strIsNeg ? 3 : 2);
-    if (str.size() == 0)
-        throw std::invalid_argument(exceptionMsg);
-    big.chunks.reserve(ceilDiv(str.size(), 8));
-    while (str.size())
-    {
-        uint32_t tmp;
-        auto sub = str.substr(str.size() > 8 ? str.size() - 8 : 0);
-        str.remove_suffix(sub.size());
-        auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp, 16);
-        if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
-            throw std::invalid_argument(exceptionMsg);
-        big.chunks.push_back(tmp);
-    }
-    if (strIsNeg)
-        big.negate();
-    big.normalize();
-    return big;
 }
 
 DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
