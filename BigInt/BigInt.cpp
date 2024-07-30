@@ -622,21 +622,27 @@ std::strong_ordering BigInt::operator<=>(BigInt &&rhs) &&
     return cmp(std::move(*this) - std::move(rhs));
 }
 
-std::string BigInt::toString() const
+std::string BigInt::toString() const &
+{
+    return BigInt(*this).toString();
+}
+
+std::string BigInt::toString() &&
 {
     if (*this == Zero())
         return "0";
     std::string res = isNeg ? "-" : "";
-    auto num = isNeg ? -*this : *this;
+    if (isNeg)
+        negate();
     std::vector<std::string> digits;
-    while (num)
+    while (*this)
     {
-        auto [q, r] = divmod(num, OneExa());
+        auto [q, r] = divmod(*this, OneExa());
         uint64_t val = r.chunks.size() > 1 ? r.chunks[1] : 0;
         val <<= 32;
         val += r.chunks.size() > 0 ? r.chunks[0] : 0;
         digits.push_back(std::to_string(val));
-        num = std::move(q);
+        *this = std::move(q);
     }
     auto first = true;
     for (size_t i = digits.size(); i--;)
@@ -649,16 +655,22 @@ std::string BigInt::toString() const
     return res;
 }
 
-std::string BigInt::toHex() const
+std::string BigInt::toHex() const &
+{
+    return BigInt(*this).toHex();
+}
+
+std::string BigInt::toHex() &&
 {
     if (*this == Zero())
         return "0x0";
     std::string res = isNeg ? "-0x" : "0x";
-    auto num = isNeg ? -*this : *this;
-    std::vector<std::string> hexChunks(num.chunks.size(), std::string(8, '0'));
-    for (size_t i = 0; i < num.chunks.size(); ++i)
+    if (isNeg)
+        negate();
+    std::vector<std::string> hexChunks(chunks.size(), std::string(8, '0'));
+    for (size_t i = 0; i < chunks.size(); ++i)
     {
-        auto &chunk = num.chunks[i];
+        auto &chunk = chunks[i];
         auto &hexChunk = hexChunks[i];
         for (size_t j = hexChunk.size(); j-- && chunk;)
         {

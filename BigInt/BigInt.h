@@ -73,8 +73,10 @@ struct BigInt
     std::strong_ordering operator<=>(const BigInt &rhs) &&;
     std::strong_ordering operator<=>(BigInt &&rhs) &&;
 
-    std::string toString() const;
-    std::string toHex() const;
+    std::string toString() const &;
+    std::string toString() &&;
+    std::string toHex() const &;
+    std::string toHex() &&;
     void normalize();
     void negate();
     void invert();
