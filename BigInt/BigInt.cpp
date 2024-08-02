@@ -131,53 +131,34 @@ static void subFast(BigInt &acc, const BigInt &other)
 
 BigInt::BigInt() {}
 
-BigInt::BigInt(int64_t num)
+BigInt::BigInt(int num) : BigInt(static_cast<long long>(num)) {}
+BigInt::BigInt(long num) : BigInt(static_cast<long long>(num)) {}
+BigInt::BigInt(const long long num) : BigInt(static_cast<unsigned long long>(num))
 {
     if (num < 0)
     {
-        if (num == static_cast<int64_t>(0x8000'0000'0000'0000))
+        bool borrow = true;
+        for (auto &chunk : chunks)
         {
-            static const auto val = BigInt::fromHex("-0x8000000000000000");
-            *this = val;
-            return;
+            if (borrow)
+                borrow = --chunk == static_cast<uint32_t>(-1);
+            chunk = ~chunk;
         }
         isNeg = true;
-        num = -num;
+        normalize(*this);
     }
+}
+
+BigInt::BigInt(unsigned num) : BigInt(static_cast<unsigned long long>(num)) {}
+BigInt::BigInt(unsigned long num) : BigInt(static_cast<unsigned long long>(num)) {}
+BigInt::BigInt(unsigned long long num)
+{
     chunks.reserve(2);
     while (num)
     {
         chunks.push_back(static_cast<uint32_t>(num));
         num >>= 32;
     }
-}
-
-BigInt::BigInt(std::string_view str)
-{
-    constexpr auto exceptionMsg = "BigInt string_view ctor has invalid argument";
-    bool strIsNeg = str.size() && str[0] == '-';
-    if (strIsNeg)
-        str.remove_prefix(1);
-    if (str.size() == 0)
-        throw std::invalid_argument(exceptionMsg);
-    while (str.size())
-    {
-        *this *= TenQuintillion();
-        auto sub = str.substr(0, str.size() % 19 == 0 ? 19 : str.size() % 19);
-        uint64_t tmp;
-        auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp);
-        if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
-            throw std::invalid_argument(exceptionMsg);
-        chunks.resize(std::max<size_t>(chunks.size() + 1, 3));
-        if (tmp)
-            addChunkFast(chunks, 0, static_cast<uint32_t>(tmp));
-        if (tmp >> 32)
-            addChunkFast(chunks, 1, static_cast<uint32_t>(tmp >> 32));
-        normalize(*this);
-        str.remove_prefix(sub.size());
-    }
-    if (strIsNeg)
-        negate();
 }
 
 BigInt &BigInt::operator+=(const BigInt &rhs)
@@ -889,10 +870,10 @@ std::string BigInt::toHex() &&
         auto &hexChunk = hexChunks[i];
         for (size_t j = hexChunk.size(); j-- && chunk;)
         {
-            auto off = static_cast<char>(chunk % 16);
+            auto off = chunk % 16;
             chunk /= 16;
-            hexChunk[j] = off < 10 ? '0' + off
-                                   : 'a' + off - 10;
+            hexChunk[j] = static_cast<char>(off < 10 ? '0' + off
+                                                     : 'a' + off - 10);
         }
     }
     auto &lastHexChunk = hexChunks.back();
@@ -904,16 +885,46 @@ std::string BigInt::toHex() &&
     return res;
 }
 
+BigInt BigInt::fromString(std::string_view str)
+{
+    constexpr auto exceptionMsg = "BigInt string_view ctor has invalid argument";
+    bool strIsNeg = str.size() && str[0] == '-';
+    if (strIsNeg)
+        str.remove_prefix(1);
+    if (str.size() == 0)
+        throw std::invalid_argument(exceptionMsg);
+    BigInt res;
+    while (str.size())
+    {
+        res *= TenQuintillion();
+        auto sub = str.substr(0, str.size() % 19 == 0 ? 19 : str.size() % 19);
+        uint64_t tmp;
+        auto fcRes = std::from_chars(sub.data(), sub.data() + sub.size(), tmp);
+        if (fcRes.ec != std::errc{} || fcRes.ptr != sub.data() + sub.size())
+            throw std::invalid_argument(exceptionMsg);
+        res.chunks.resize(std::max<size_t>(res.chunks.size() + 1, 3));
+        if (tmp)
+            addChunkFast(res.chunks, 0, static_cast<uint32_t>(tmp));
+        if (tmp >> 32)
+            addChunkFast(res.chunks, 1, static_cast<uint32_t>(tmp >> 32));
+        normalize(res);
+        str.remove_prefix(sub.size());
+    }
+    if (strIsNeg)
+        res.negate();
+    return res;
+}
+
 BigInt BigInt::fromHex(std::string_view str)
 {
     constexpr auto exceptionMsg = "BigInt fromHex has invalid argument";
-    BigInt res;
     bool strIsNeg = str.substr(0, 3) == "-0x"  ? true
                     : str.substr(0, 2) == "0x" ? false
                                                : throw std::invalid_argument(exceptionMsg);
     str.remove_prefix(strIsNeg ? 3 : 2);
     if (str.size() == 0)
         throw std::invalid_argument(exceptionMsg);
+    BigInt res;
     res.chunks.resize(ceilDiv(str.size(), 8));
     for (auto &chunk : res.chunks)
     {

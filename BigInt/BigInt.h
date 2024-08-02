@@ -13,8 +13,12 @@ struct BigInt
     bool isNeg = false;
 
     BigInt();
-    BigInt(int64_t num);
-    BigInt(std::string_view str);
+    BigInt(int num);
+    BigInt(long num);
+    BigInt(long long num);
+    BigInt(unsigned num);
+    BigInt(unsigned long num);
+    BigInt(unsigned long long num);
 
     BigInt &operator+=(const BigInt &rhs);
     BigInt &operator+=(BigInt &&rhs);
@@ -29,8 +33,8 @@ struct BigInt
     BigInt &operator|=(BigInt &&rhs);
     BigInt &operator^=(const BigInt &rhs);
     BigInt &operator^=(BigInt &&rhs);
-    BigInt &operator<<=(const size_t n);
-    BigInt &operator>>=(const size_t n);
+    BigInt &operator<<=(size_t n);
+    BigInt &operator>>=(size_t n);
     BigInt &operator++();
     BigInt &operator--();
     BigInt operator++(int);
@@ -62,10 +66,10 @@ struct BigInt
     BigInt &&operator^(BigInt &&rhs) const &;
     BigInt &&operator^(const BigInt &rhs) &&;
     BigInt &&operator^(BigInt &&rhs) &&;
-    BigInt operator<<(const size_t n) const &;
-    BigInt &&operator<<(const size_t n) &&;
-    BigInt operator>>(const size_t n) const &;
-    BigInt &&operator>>(const size_t n) &&;
+    BigInt operator<<(size_t n) const &;
+    BigInt &&operator<<(size_t n) &&;
+    BigInt operator>>(size_t n) const &;
+    BigInt &&operator>>(size_t n) &&;
     explicit operator bool() const;
     bool operator==(const BigInt &rhs) const;
     std::strong_ordering operator<=>(const BigInt &rhs) const &;
@@ -81,6 +85,7 @@ struct BigInt
     std::string toHex() const &;
     std::string toHex() &&;
 
+    static BigInt fromString(std::string_view str);
     static BigInt fromHex(std::string_view str);
     static DivModRes divmod(const BigInt &lhs, const BigInt &rhs);
 };
