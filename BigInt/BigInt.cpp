@@ -30,26 +30,122 @@ static const BigInt &Three()
     return val;
 }
 
-static const BigInt &OneExa()
+static const BigInt &TenQuintillion()
 {
-    static const BigInt val(1'000'000'000'000'000'000);
+    static const auto val = BigInt::fromHex("0x8ac7230489e80000");
     return val;
+}
+
+static bool addChunk(std::vector<uint32_t> &chunks, size_t i, const uint32_t val)
+{
+    auto hasCarry = (chunks[i++] += val) < val;
+    while (hasCarry && i < chunks.size())
+    {
+        hasCarry = ++chunks[i++] == 0;
+    }
+    return hasCarry;
+}
+
+static void addChunkFast(std::vector<uint32_t> &chunks, size_t i, const uint32_t val)
+{
+    auto hasCarry = (chunks[i++] += val) < val;
+    while (hasCarry)
+    {
+        hasCarry = ++chunks[i++] == 0;
+    }
+}
+
+static bool subChunk(std::vector<uint32_t> &chunks, size_t i, const uint32_t val)
+{
+    auto prev = chunks[i];
+    auto hasBorrow = (chunks[i++] -= val) > prev;
+    while (hasBorrow && i < chunks.size())
+    {
+        hasBorrow = --chunks[i++] == static_cast<uint32_t>(-1);
+    }
+    return hasBorrow;
+}
+
+static void subChunkFast(std::vector<uint32_t> &chunks, size_t i, const uint32_t val)
+{
+    auto prev = chunks[i];
+    auto hasBorrow = (chunks[i++] -= val) > prev;
+    while (hasBorrow)
+    {
+        hasBorrow = --chunks[i++] == static_cast<uint32_t>(-1);
+    }
+}
+
+static void normalize(BigInt &big)
+{
+    while (big.chunks.size() && big.chunks.back() == 0)
+    {
+        big.chunks.pop_back();
+    }
+    if (big.chunks.size() == 0)
+        big.isNeg = false;
+}
+
+static void add(BigInt &acc, const BigInt &other)
+{
+    acc.chunks.resize(std::max(acc.chunks.size(), other.chunks.size()) + 1);
+    for (size_t i = 0; i < other.chunks.size(); ++i)
+    {
+        if (other.chunks[i])
+            addChunkFast(acc.chunks, i, other.chunks[i]);
+    }
+    normalize(acc);
+}
+
+static void sub(BigInt &acc, const BigInt &other)
+{
+    if (acc.chunks.size() <= other.chunks.size())
+        acc.chunks.resize(std::max(acc.chunks.size(), other.chunks.size()));
+    bool hasBorrow = false;
+    for (size_t i = 0; i < other.chunks.size(); ++i)
+    {
+        if (other.chunks[i] && subChunk(acc.chunks, i, other.chunks[i]))
+            hasBorrow = true;
+    }
+    if (hasBorrow)
+    {
+        for (auto &chunk : acc.chunks)
+        {
+            chunk = ~chunk;
+        }
+        addChunkFast(acc.chunks, 0, 1);
+        acc.negate();
+    }
+    normalize(acc);
+}
+
+static void subFast(BigInt &acc, const BigInt &other)
+{
+    for (size_t i = 0; i < other.chunks.size(); ++i)
+    {
+        if (other.chunks[i])
+            subChunkFast(acc.chunks, i, other.chunks[i]);
+    }
+    normalize(acc);
 }
 
 BigInt::BigInt() {}
 
 BigInt::BigInt(int64_t num)
 {
-    auto tmp = num;
-    size_t count = 0;
-    while (tmp != 0 && tmp != -1)
+    if (num < 0)
     {
-        ++count;
-        tmp >>= 32;
+        if (num == static_cast<int64_t>(0x8000'0000'0000'0000))
+        {
+            static const auto val = BigInt::fromHex("-0x8000000000000000");
+            *this = val;
+            return;
+        }
+        isNeg = true;
+        num = -num;
     }
-    chunks.reserve(count);
-    isNeg = num < 0;
-    while (num != 0 && num != -1)
+    chunks.reserve(2);
+    while (num)
     {
         chunks.push_back(static_cast<uint32_t>(num));
         num >>= 32;
@@ -59,30 +155,26 @@ BigInt::BigInt(int64_t num)
 BigInt::BigInt(std::string_view str)
 {
     constexpr auto exceptionMsg = "BigInt string_view ctor has invalid argument";
-    auto strIsNeg = str.size() && str[0] == '-';
+    bool strIsNeg = str.size() && str[0] == '-';
     if (strIsNeg)
-        str = str.substr(1);
+        str.remove_prefix(1);
     if (str.size() == 0)
         throw std::invalid_argument(exceptionMsg);
-    auto sub = str.substr(0, str.size() % 18);
-    int64_t tmp;
-    if (sub.size())
-    {
-        auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp);
-        if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
-            throw std::invalid_argument(exceptionMsg);
-        *this += tmp;
-        str = str.substr(str.size() % 18);
-    }
     while (str.size())
     {
-        *this *= OneExa();
-        sub = str.substr(0, 18);
+        *this *= TenQuintillion();
+        auto sub = str.substr(0, str.size() % 19 == 0 ? 19 : str.size() % 19);
+        uint64_t tmp;
         auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp);
         if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
             throw std::invalid_argument(exceptionMsg);
-        *this += tmp;
-        str = str.substr(18);
+        chunks.resize(std::max<size_t>(chunks.size() + 1, 3));
+        if (tmp)
+            addChunkFast(chunks, 0, static_cast<uint32_t>(tmp));
+        if (tmp >> 32)
+            addChunkFast(chunks, 1, static_cast<uint32_t>(tmp >> 32));
+        normalize(*this);
+        str.remove_prefix(sub.size());
     }
     if (strIsNeg)
         negate();
@@ -91,30 +183,19 @@ BigInt::BigInt(std::string_view str)
 BigInt &BigInt::operator+=(const BigInt &rhs)
 {
     if (this == &rhs)
-        return *this += BigInt(rhs);
-    size_t i = 0;
-    chunks.reserve(std::max(chunks.size(), rhs.chunks.size()) + 1);
-    auto lim = chunks.size();
-    for (; i < rhs.chunks.size(); ++i)
     {
-        addChunk(i, rhs.chunks[i]);
+        auto rhsCopy = rhs;
+        return *this += rhsCopy;
     }
-    if (rhs.isNeg)
+    if (isNeg == rhs.isNeg)
+        add(*this, rhs);
+    else
     {
-        while (i < lim)
-        {
-            addChunk(i++, static_cast<uint32_t>(-1));
-        }
-        if (i < chunks.size())
-            chunks.pop_back();
+        if (chunks.size() > rhs.chunks.size())
+            subFast(*this, rhs);
         else
-        {
-            if (isNeg)
-                addChunk(i, static_cast<uint32_t>(-1));
-            isNeg = true;
-        }
+            sub(*this, rhs);
     }
-    normalize();
     return *this;
 }
 
@@ -129,29 +210,15 @@ BigInt &BigInt::operator-=(const BigInt &rhs)
 {
     if (this == &rhs)
         return *this = Zero();
-    size_t i = 0;
-    chunks.reserve(std::max(chunks.size(), rhs.chunks.size()) + 1);
-    auto lim = chunks.size();
-    for (; i < rhs.chunks.size(); ++i)
+    if (isNeg != rhs.isNeg)
+        add(*this, rhs);
+    else
     {
-        subChunk(i, rhs.chunks[i]);
-    }
-    if (rhs.isNeg)
-    {
-        while (i < lim)
-        {
-            subChunk(i++, static_cast<uint32_t>(-1));
-        }
-        if (i < chunks.size())
-            chunks.pop_back();
+        if (chunks.size() > rhs.chunks.size())
+            subFast(*this, rhs);
         else
-        {
-            if (!isNeg)
-                subChunk(i, static_cast<uint32_t>(-1));
-            isNeg = false;
-        }
+            sub(*this, rhs);
     }
-    normalize();
     return *this;
 }
 
@@ -181,23 +248,41 @@ BigInt &BigInt::operator%=(const BigInt &rhs)
     return *this = *this % rhs;
 }
 
-static void bitwise(BigInt &lhs, const BigInt &rhs, std::function<void(uint32_t &, uint32_t)> fn)
+static void bitwise(BigInt &lhs, const BigInt &rhs, const std::function<void(uint32_t &, uint32_t)> &fn)
 {
-    auto lim = std::max(lhs.chunks.size(), rhs.chunks.size());
-    for (size_t i = 0; i < lim; ++i)
-    {
-        if (i == lhs.chunks.size())
-            lhs.chunks.push_back(lhs.isNeg ? static_cast<uint32_t>(-1) : 0);
-        auto &a = lhs.chunks[i];
-        auto b = i < rhs.chunks.size() ? rhs.chunks[i]
-                 : rhs.isNeg           ? static_cast<uint32_t>(-1)
-                                       : 0;
-        fn(a, b);
-    }
     uint32_t x = lhs.isNeg ? static_cast<uint32_t>(-1) : 0;
     fn(x, rhs.isNeg ? static_cast<uint32_t>(-1) : 0);
-    lhs.isNeg = static_cast<bool>(x);
-    lhs.normalize();
+    bool resIsNeg = static_cast<bool>(x);
+    lhs.chunks.resize(std::max(lhs.chunks.size(), rhs.chunks.size()) + (resIsNeg ? 1 : 0));
+    bool lhsBorrow = lhs.isNeg;
+    bool rhsBorrow = rhs.isNeg;
+    bool resBorrow = resIsNeg;
+    for (size_t i = 0; i < lhs.chunks.size(); ++i)
+    {
+        auto &a = lhs.chunks[i];
+        if (lhs.isNeg)
+        {
+            if (lhsBorrow)
+                lhsBorrow = --a == static_cast<uint32_t>(-1);
+            a = ~a;
+        }
+        auto b = i < rhs.chunks.size() ? rhs.chunks[i] : 0;
+        if (rhs.isNeg)
+        {
+            if (rhsBorrow)
+                rhsBorrow = --b == static_cast<uint32_t>(-1);
+            b = ~b;
+        }
+        fn(a, b);
+        if (resIsNeg)
+        {
+            if (resBorrow)
+                resBorrow = --a == static_cast<uint32_t>(-1);
+            a = ~a;
+        }
+    }
+    lhs.isNeg = resIsNeg;
+    normalize(lhs);
 }
 
 BigInt &BigInt::operator&=(const BigInt &rhs)
@@ -261,21 +346,19 @@ BigInt &BigInt::operator<<=(const size_t n)
 {
     if (n == 0)
         return *this;
-    const auto oldSz = chunks.size();
     const auto off = n / 32;
     const auto s = n % 32;
     chunks.resize(chunks.size() + ceilDiv(n, 32));
     for (auto i = chunks.size(); i--;)
     {
-        auto x = i < off           ? 0
-                 : i - off < oldSz ? chunks[i - off] << s
-                 : isNeg           ? static_cast<uint32_t>(-1) << s
-                                   : 0;
-        if (s)
-            x |= i < off + 1 ? 0 : chunks[i - off - 1] >> (32 - s);
+        uint32_t x = 0;
+        if (i >= off)
+            x = chunks[i - off] << s;
+        if (s && i >= off + 1)
+            x |= chunks[i - (off + 1)] >> (32 - s);
         chunks[i] = x;
     }
-    normalize();
+    normalize(*this);
     return *this;
 }
 
@@ -286,22 +369,26 @@ BigInt &BigInt::operator>>=(const size_t n)
     if (n >= chunks.size() * 32)
     {
         chunks.clear();
+        if (isNeg)
+            chunks.push_back(1);
         return *this;
     }
+    if (isNeg)
+        subChunkFast(chunks, 0, 1);
     const auto off = n / 32;
     const auto s = n % 32;
     for (size_t i = 0; i < chunks.size(); ++i)
     {
-        auto x = i + off < chunks.size() ? chunks[i + off] >> s
-                 : isNeg                 ? static_cast<uint32_t>(-1) >> s
-                                         : 0;
-        if (s)
-            x |= i + off + 1 < chunks.size() ? chunks[i + off + 1] << (32 - s)
-                 : isNeg                     ? static_cast<uint32_t>(-1) << (32 - s)
-                                             : 0;
+        uint32_t x = 0;
+        if (i + off < chunks.size())
+            x = chunks[i + off] >> s;
+        if (s && i + off + 1 < chunks.size())
+            x |= chunks[i + off + 1] << (32 - s);
         chunks[i] = x;
     }
-    normalize();
+    if (isNeg)
+        addChunkFast(chunks, 0, 1);
+    normalize(*this);
     return *this;
 }
 
@@ -408,6 +495,24 @@ BigInt &&BigInt::operator-(BigInt &&rhs) &&
     return std::move(*this -= rhs);
 }
 
+static BigInt mul(const BigInt &lhs, const BigInt &rhs)
+{
+    BigInt res;
+    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
+    for (size_t i = 0; i < lhs.chunks.size(); ++i)
+    {
+        for (size_t j = 0; j < rhs.chunks.size(); ++j)
+        {
+            auto prod = static_cast<uint64_t>(lhs.chunks[i]) * rhs.chunks[j];
+            if (prod)
+                addChunkFast(res.chunks, i + j, static_cast<uint32_t>(prod));
+            if (prod >> 32)
+                addChunkFast(res.chunks, i + j + 1, static_cast<uint32_t>(prod >> 32));
+        }
+    }
+    return res;
+}
+
 struct Toom2Split
 {
     BigInt low, high;
@@ -415,16 +520,15 @@ struct Toom2Split
     Toom2Split(const BigInt &big, const size_t sz)
     {
         size_t i = 0;
-        size_t bigSz = big.chunks.size();
-        low.chunks.reserve(std::min(bigSz, sz));
-        for (; i < bigSz && i < sz; ++i)
+        low.chunks.resize(std::min(big.chunks.size(), sz));
+        for (; i < big.chunks.size() && i < sz; ++i)
         {
-            low.chunks.push_back(big.chunks[i]);
+            low.chunks[i] = big.chunks[i];
         }
-        high.chunks.reserve(bigSz - i);
-        for (; i < bigSz; ++i)
+        high.chunks.resize(big.chunks.size() - i);
+        for (; i < big.chunks.size(); ++i)
         {
-            high.chunks.push_back(big.chunks[i]);
+            high.chunks[i - sz] = big.chunks[i];
         }
     }
 };
@@ -440,15 +544,15 @@ static BigInt toom2(const BigInt &lhs, const BigInt &rhs)
     r[1] = r[0] + r[2];
     r[1] -= (std::move(p.high) - std::move(p.low)) * (std::move(q.high) - std::move(q.low));
     BigInt res;
-    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size());
+    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
     for (size_t i = 0; i < r.size(); ++i)
     {
         for (size_t j = 0; j < r[i].chunks.size(); ++j)
         {
-            res.addChunkFast(sz * i + j, r[i].chunks[j]);
+            if (r[i].chunks[j])
+                addChunkFast(res.chunks, sz * i + j, r[i].chunks[j]);
         }
     }
-    res.normalize();
     return res;
 }
 
@@ -460,21 +564,20 @@ struct Toom3Mat
     {
         BigInt b0, b1, b2;
         size_t i = 0;
-        size_t bigSz = big.chunks.size();
-        b0.chunks.reserve(std::min(bigSz, sz));
-        for (; i < bigSz && i < sz; ++i)
+        b0.chunks.resize(std::min(big.chunks.size(), sz));
+        for (; i < big.chunks.size() && i < sz; ++i)
         {
-            b0.chunks.push_back(big.chunks[i]);
+            b0.chunks[i] = big.chunks[i];
         }
-        b1.chunks.reserve(std::min(bigSz - i, sz * 2 - i));
-        for (; i < bigSz && i < sz * 2; ++i)
+        b1.chunks.resize(std::min(big.chunks.size() - i, sz * 2 - i));
+        for (; i < big.chunks.size() && i < sz * 2; ++i)
         {
-            b1.chunks.push_back(big.chunks[i]);
+            b1.chunks[i - sz] = big.chunks[i];
         }
-        b2.chunks.reserve(bigSz - i);
-        for (; i < bigSz; ++i)
+        b2.chunks.resize(big.chunks.size() - i);
+        for (; i < big.chunks.size(); ++i)
         {
-            b2.chunks.push_back(big.chunks[i]);
+            b2.chunks[i - sz * 2] = big.chunks[i];
         }
         auto tmp = b0 + b2;
         zero = b0;
@@ -514,56 +617,30 @@ static BigInt toom3(const BigInt &lhs, const BigInt &rhs)
     r[2] += r[1] - r[4];
     r[1] -= r[3];
     BigInt res;
-    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size());
+    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
     for (size_t i = 0; i < r.size(); ++i)
     {
         for (size_t j = 0; j < r[i].chunks.size(); ++j)
         {
-            res.addChunkFast(sz * i + j, r[i].chunks[j]);
+            if (r[i].chunks[j])
+                addChunkFast(res.chunks, sz * i + j, r[i].chunks[j]);
         }
     }
-    res.normalize();
     return res;
 }
 
-static constexpr size_t Toom2Thresh = 300;
-static constexpr size_t Toom3Thresh = 800;
+static constexpr size_t Toom2Thresh = 550;
+static constexpr size_t Toom3Thresh = 2200;
 
 BigInt BigInt::operator*(const BigInt &rhs) const
 {
-    auto &lhs = *this;
-    if (!lhs.isNeg && !rhs.isNeg)
-    {
-        const auto score = lhs.chunks.size() * rhs.chunks.size();
-        if (score > Toom3Thresh)
-            return toom3(lhs, rhs);
-        if (score > Toom2Thresh)
-            return toom2(lhs, rhs);
-        BigInt res;
-        res.chunks.resize(lhs.chunks.size() + rhs.chunks.size());
-        for (size_t i = 0; i < lhs.chunks.size(); ++i)
-        {
-            for (size_t j = 0; j < rhs.chunks.size(); ++j)
-            {
-                auto prod = static_cast<uint64_t>(lhs.chunks[i]) * rhs.chunks[j];
-                if (prod)
-                    res.addChunkFast(i + j, static_cast<uint32_t>(prod));
-                if (prod >> 32)
-                    res.addChunkFast(i + j + 1, static_cast<uint32_t>(prod >> 32));
-            }
-        }
-        res.normalize();
-        return res;
-    }
-    else
-    {
-        auto res = lhs.isNeg && rhs.isNeg ? -lhs * -rhs
-                   : lhs.isNeg            ? -lhs * rhs
-                                          : lhs * -rhs;
-        if (lhs.isNeg != rhs.isNeg)
-            res.negate();
-        return res;
-    }
+    const auto score = chunks.size() * rhs.chunks.size();
+    auto res = score > Toom3Thresh   ? toom3(*this, rhs)
+               : score > Toom2Thresh ? toom2(*this, rhs)
+                                     : mul(*this, rhs);
+    res.isNeg = isNeg != rhs.isNeg;
+    normalize(res);
+    return res;
 }
 
 BigInt BigInt::operator/(const BigInt &rhs) const
@@ -705,7 +782,7 @@ BigInt &&BigInt::operator>>(const size_t n) &&
 
 BigInt::operator bool() const
 {
-    return isNeg || chunks.size();
+    return chunks.size();
 }
 
 bool BigInt::operator==(const BigInt &rhs) const
@@ -716,9 +793,9 @@ bool BigInt::operator==(const BigInt &rhs) const
 
 static std::strong_ordering cmp(const BigInt &diff)
 {
-    return !diff.isNeg && diff.chunks.size() == 0 ? std::strong_ordering::equal
-           : diff.isNeg                           ? std::strong_ordering::less
-                                                  : std::strong_ordering::greater;
+    return diff.chunks.size() == 0 ? std::strong_ordering::equal
+           : diff.isNeg            ? std::strong_ordering::less
+                                   : std::strong_ordering::greater;
 }
 
 std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const &
@@ -741,6 +818,26 @@ std::strong_ordering BigInt::operator<=>(BigInt &&rhs) &&
     return cmp(std::move(*this) - std::move(rhs));
 }
 
+void BigInt::negate()
+{
+    if (*this == Zero())
+        return;
+    isNeg = !isNeg;
+}
+
+void BigInt::invert()
+{
+    if (isNeg)
+        subChunkFast(chunks, 0, 1);
+    else
+    {
+        chunks.resize(chunks.size() + 1);
+        addChunkFast(chunks, 0, 1);
+    }
+    isNeg = !isNeg;
+    normalize(*this);
+}
+
 std::string BigInt::toString() const &
 {
     return BigInt(*this).toString();
@@ -751,23 +848,24 @@ std::string BigInt::toString() &&
     if (*this == Zero())
         return "0";
     std::string res = isNeg ? "-" : "";
-    if (isNeg)
-        negate();
     std::vector<std::string> digits;
     while (*this)
     {
-        auto [q, r] = divmod(*this, OneExa());
-        uint64_t val = r.chunks.size() > 1 ? r.chunks[1] : 0;
+        auto [q, r] = divmod(*this, TenQuintillion());
+        uint64_t val = 0;
+        if (r.chunks.size() > 1)
+            val |= r.chunks[1];
         val <<= 32;
-        val += r.chunks.size() > 0 ? r.chunks[0] : 0;
+        if (r.chunks.size() > 0)
+            val |= r.chunks[0];
         digits.push_back(std::to_string(val));
         *this = std::move(q);
     }
     auto first = true;
     for (size_t i = digits.size(); i--;)
     {
-        if (!first && digits[i].size() < 18)
-            res += std::string(18 - digits[i].size(), '0');
+        if (!first && digits[i].size() < 19)
+            res += std::string(19 - digits[i].size(), '0');
         res += digits[i];
         first = false;
     }
@@ -784,8 +882,6 @@ std::string BigInt::toHex() &&
     if (*this == Zero())
         return "0x0";
     std::string res = isNeg ? "-0x" : "0x";
-    if (isNeg)
-        negate();
     std::vector<std::string> hexChunks(chunks.size(), std::string(8, '0'));
     for (size_t i = 0; i < chunks.size(); ++i)
     {
@@ -808,109 +904,29 @@ std::string BigInt::toHex() &&
     return res;
 }
 
-void BigInt::normalize()
-{
-    while (chunks.size() && chunks.back() == (isNeg ? static_cast<uint32_t>(-1) : 0))
-    {
-        chunks.pop_back();
-    }
-}
-
-void BigInt::negate()
-{
-    invert();
-    addChunk(0, 1);
-    normalize();
-}
-
-void BigInt::invert()
-{
-    for (auto &chunk : chunks)
-    {
-        chunk = ~chunk;
-    }
-    isNeg = !isNeg;
-}
-
-void BigInt::addChunk(size_t i, const uint32_t val)
-{
-    while (chunks.size() <= i)
-    {
-        chunks.push_back(isNeg ? static_cast<uint32_t>(-1) : 0);
-    }
-    auto hasCarry = (chunks[i++] += val) < val;
-    while (hasCarry)
-    {
-        if (i == chunks.size())
-        {
-            if (isNeg)
-            {
-                isNeg = false;
-                return;
-            }
-            chunks.push_back(0);
-        }
-        hasCarry = ++chunks[i++] == 0;
-    }
-}
-
-void BigInt::addChunkFast(size_t i, const uint32_t val)
-{
-    auto hasCarry = (chunks[i++] += val) < val;
-    while (hasCarry)
-    {
-        hasCarry = ++chunks[i++] == 0;
-    }
-}
-
-void BigInt::subChunk(size_t i, const uint32_t val)
-{
-    while (chunks.size() <= i)
-    {
-        chunks.push_back(isNeg ? static_cast<uint32_t>(-1) : 0);
-    }
-    auto prev = chunks[i];
-    auto hasBorrow = (chunks[i++] -= val) > prev;
-    while (hasBorrow)
-    {
-        if (i == chunks.size())
-        {
-            if (!isNeg)
-            {
-                isNeg = true;
-                return;
-            }
-            chunks.push_back(static_cast<uint32_t>(-1));
-        }
-        hasBorrow = --chunks[i++] == static_cast<uint32_t>(-1);
-    }
-}
-
 BigInt BigInt::fromHex(std::string_view str)
 {
     constexpr auto exceptionMsg = "BigInt fromHex has invalid argument";
-    BigInt big;
-    auto strIsNeg = str.substr(0, 3) == "-0x"  ? true
+    BigInt res;
+    bool strIsNeg = str.substr(0, 3) == "-0x"  ? true
                     : str.substr(0, 2) == "0x" ? false
                                                : throw std::invalid_argument(exceptionMsg);
     str.remove_prefix(strIsNeg ? 3 : 2);
     if (str.size() == 0)
         throw std::invalid_argument(exceptionMsg);
-    big.chunks.reserve(ceilDiv(str.size(), 8));
-    while (str.size())
+    res.chunks.resize(ceilDiv(str.size(), 8));
+    for (auto &chunk : res.chunks)
     {
-        uint32_t tmp;
         auto sub = str.substr(str.size() > 8 ? str.size() - 8 : 0);
         str.remove_suffix(sub.size());
-        auto res = std::from_chars(sub.data(), sub.data() + sub.size(), tmp, 16);
-        if (res.ec != std::errc{} || res.ptr != sub.data() + sub.size())
+        auto fcRes = std::from_chars(sub.data(), sub.data() + sub.size(), chunk, 16);
+        if (fcRes.ec != std::errc{} || fcRes.ptr != sub.data() + sub.size())
             throw std::invalid_argument(exceptionMsg);
-        big.chunks.push_back(tmp);
     }
+    normalize(res);
     if (strIsNeg)
-        big.negate();
-    big.normalize();
-    return big;
+        res.negate();
+    return res;
 }
 
 static int bitCount(uint32_t x)
@@ -929,8 +945,9 @@ static int bitCount(uint32_t x)
     return acc;
 }
 
-static void divmodMulSub(BigInt &r, uint64_t x, const BigInt &d, size_t i)
+static bool divmodMulSub(BigInt &r, uint64_t x, const BigInt &d, size_t i)
 {
+    bool hasBorrow = false;
     for (; x; x >>= 32, ++i)
     {
         auto y = static_cast<uint32_t>(x);
@@ -938,37 +955,37 @@ static void divmodMulSub(BigInt &r, uint64_t x, const BigInt &d, size_t i)
         {
             uint64_t z = d.chunks[j];
             z *= y;
-            if (z)
-                r.subChunk(i + j, static_cast<uint32_t>(z));
-            if (z >> 32)
-                r.subChunk(i + j + 1, static_cast<uint32_t>(z >> 32));
+            if (z && subChunk(r.chunks, i + j, static_cast<uint32_t>(z)))
+                hasBorrow = true;
+            if (z >> 32 && subChunk(r.chunks, i + j + 1, static_cast<uint32_t>(z >> 32)))
+                hasBorrow = true;
         }
     }
-    r.normalize();
+    normalize(r);
+    return hasBorrow;
 }
 
-static void divmodAddBack(BigInt &r, const BigInt &d, const size_t i)
+static bool divmodAddBack(BigInt &r, const BigInt &d, const size_t i)
 {
+    bool hasCarry = false;
     for (size_t j = 0; j < d.chunks.size(); ++j)
     {
-        r.addChunk(i + j, d.chunks[j]);
+        if (d.chunks[j] && addChunk(r.chunks, i + j, d.chunks[j]))
+            hasCarry = true;
     }
-    r.normalize();
+    normalize(r);
+    return hasCarry;
 }
 
 DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
 {
     DivModRes res{{}, lhs};
     auto d = rhs;
-    if (lhs.isNeg)
-        res.r.negate();
-    if (rhs.isNeg)
-        d.negate();
     const int s = 32 - bitCount(d.chunks.back());
     res.r <<= s;
     d <<= s;
     if (res.r.chunks.size() + 1 > d.chunks.size())
-        res.q.chunks.reserve(res.r.chunks.size() + 1 - d.chunks.size());
+        res.q.chunks.resize(res.r.chunks.size() + 1 - d.chunks.size());
     const auto x = d.chunks.back();
     for (size_t i = res.r.chunks.size(); i-- >= d.chunks.size();)
     {
@@ -976,23 +993,20 @@ DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
         y |= i + 1 < res.r.chunks.size() ? static_cast<uint64_t>(res.r.chunks[i + 1]) << 32 : 0;
         auto z = y / x;
         size_t j = i - d.chunks.size() + 1;
-        divmodMulSub(res.r, z, d, j);
-        while (res.r.isNeg)
-        {
-            --z;
-            divmodAddBack(res.r, d, j);
-        }
+        if (divmodMulSub(res.r, z, d, j))
+            do
+            {
+                --z;
+            } while (!divmodAddBack(res.r, d, j));
         if (z)
-            res.q.addChunk(j, static_cast<uint32_t>(z));
+            addChunkFast(res.q.chunks, j, static_cast<uint32_t>(z));
         if (z >> 32)
-            res.q.addChunk(j + 1, static_cast<uint32_t>(z >> 32));
+            addChunkFast(res.q.chunks, j + 1, static_cast<uint32_t>(z >> 32));
     }
-    res.q.normalize();
-    res.r.normalize();
+    res.q.isNeg = lhs.isNeg != rhs.isNeg;
+    res.r.isNeg = lhs.isNeg;
+    normalize(res.q);
+    normalize(res.r);
     res.r >>= s;
-    if (lhs.isNeg != rhs.isNeg)
-        res.q.negate();
-    if (lhs.isNeg)
-        res.r.negate();
     return res;
 }
