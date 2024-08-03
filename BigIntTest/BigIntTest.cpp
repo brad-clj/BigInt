@@ -1,3 +1,4 @@
+#include <cmath>
 #include <stdexcept>
 #include <utility>
 #include <gtest/gtest.h>
@@ -20,6 +21,19 @@ TEST(BigIntIntCtor, HandlesNegativeNumbers)
 TEST(BigIntIntCtor, HandlesLargeNumbers)
 {
     EXPECT_TRUE(BigInt(930'350'724'101'083'004) == BigInt(930'350'724) * BigInt(1'000'000'000) + BigInt(101'083'004));
+}
+
+TEST(BigIntDoubleCtor, Works)
+{
+    EXPECT_TRUE(BigInt(0.0) == BigInt(0));
+    // double is truncated
+    EXPECT_TRUE(BigInt(0.123) == BigInt(0));
+    EXPECT_TRUE(BigInt(42.987) == BigInt(42));
+    EXPECT_TRUE(BigInt(-100.5) == BigInt(-100));
+    // documenting that inf results in zero
+    EXPECT_TRUE(BigInt(std::pow(10, 500)) == BigInt(0));
+    // big numbers
+    EXPECT_TRUE(BigInt(std::pow(10, 300)) == BigInt::fromHex("0x17e43c8800759c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"));
 }
 
 TEST(BigIntAddOps, AddAssignWorks)
@@ -611,6 +625,17 @@ TEST(BigIntToInteger, Works)
     EXPECT_TRUE(BigInt::fromHex("0xffffffffffffffff").toInteger() == -1);
     EXPECT_TRUE(BigInt::fromHex("0x10000000000000000").toInteger() == 0);
     EXPECT_TRUE(BigInt::fromHex("0xf000000000000002a").toInteger() == 42);
+}
+
+TEST(BigIntToDouble, Works)
+{
+    double x;
+    x = 42.0;
+    EXPECT_TRUE(BigInt(x).toDouble() == x);
+    x = 58279040200274790737799078014627472768784896053910301999766280991075999143173.0;
+    EXPECT_TRUE(BigInt(x).toDouble() == x);
+    x = -113915667999065675537741908772048180611206149260931812324424238027627166884238.0;
+    EXPECT_TRUE(BigInt(x).toDouble() == x);
 }
 
 TEST(BigIntToString, Works)

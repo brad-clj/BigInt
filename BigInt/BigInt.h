@@ -19,6 +19,7 @@ struct BigInt
     BigInt(unsigned num);
     BigInt(unsigned long num);
     BigInt(unsigned long long num);
+    explicit BigInt(double num);
 
     BigInt &operator+=(const BigInt &rhs);
     BigInt &operator+=(BigInt &&rhs);
@@ -81,6 +82,7 @@ struct BigInt
     void invert();
 
     int64_t toInteger() const;
+    double toDouble() const;
     std::string toString() const &;
     std::string toString() &&;
     std::string toHex() const;

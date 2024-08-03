@@ -2,6 +2,7 @@
 #include <algorithm>
 #include <array>
 #include <charconv>
+#include <cmath>
 #include <functional>
 #include <stdexcept>
 #include <utility>
@@ -34,6 +35,12 @@ static const BigInt &TenQuintillion()
 {
     static const auto val = BigInt::fromHex("0x8ac7230489e80000");
     return val;
+}
+
+template <typename N, typename D>
+auto ceilDiv(const N n, const D d)
+{
+    return n / d + (n % d ? 1 : 0);
 }
 
 static bool addChunk(std::vector<uint32_t> &chunks, size_t i, const uint32_t val)
@@ -158,6 +165,41 @@ BigInt::BigInt(unsigned long long num)
     {
         chunks.push_back(static_cast<uint32_t>(num));
         num >>= 32;
+    }
+}
+
+BigInt::BigInt(const double num)
+{
+    int exp;
+    auto fr = std::frexp(std::trunc(num), &exp);
+    if (fr < 0.0)
+    {
+        fr = -fr;
+        isNeg = true;
+    }
+    chunks.resize(ceilDiv(exp, 32));
+    for (size_t i = chunks.size(); i--;)
+    {
+        auto &chunk = chunks[i];
+        auto j = exp % 32;
+        if (j == 0)
+            j = 32;
+        while (j--)
+        {
+            chunk <<= 1;
+            if (fr >= 0.5)
+            {
+                chunk |= 0x1;
+                fr -= 0.5;
+                if (fr == 0.0)
+                {
+                    chunk <<= j;
+                    return;
+                }
+            }
+            fr *= 2.0;
+            --exp;
+        }
     }
 }
 
@@ -315,12 +357,6 @@ BigInt &BigInt::operator^=(BigInt &&rhs)
     if (rhs.chunks.capacity() > chunks.capacity())
         std::swap(*this, rhs);
     return *this ^= rhs;
-}
-
-template <typename N, typename D>
-auto ceilDiv(const N n, const D d)
-{
-    return n / d + (n % d ? 1 : 0);
 }
 
 BigInt &BigInt::operator<<=(const size_t n)
@@ -834,6 +870,22 @@ int64_t BigInt::toInteger() const
         }
         res |= static_cast<uint64_t>(chunk) << i * 32;
     }
+    return res;
+}
+
+double BigInt::toDouble() const
+{
+    double res = 0.0;
+    int n = 3;
+    for (size_t i = chunks.size(); i-- && n--;)
+    {
+        res *= std::pow(2, 32);
+        res += chunks[i];
+    }
+    if (chunks.size() > 3)
+        res *= std::pow(2, 32 * (chunks.size() - 3));
+    if (isNeg)
+        res = -res;
     return res;
 }
 
