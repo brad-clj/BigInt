@@ -13,21 +13,9 @@ static const BigInt &Zero()
     return val;
 }
 
-static const BigInt &NegOne()
-{
-    static const BigInt val(-1);
-    return val;
-}
-
 static const BigInt &One()
 {
     static const BigInt val(1);
-    return val;
-}
-
-static const BigInt &Three()
-{
-    static const BigInt val(3);
     return val;
 }
 
@@ -609,7 +597,8 @@ struct Toom3Mat
 
 static BigInt &&div2(BigInt &&big)
 {
-    if (big == NegOne())
+    static const BigInt negOne(-1);
+    if (big == negOne)
         big = Zero();
     else
         big >>= 1;
@@ -618,6 +607,7 @@ static BigInt &&div2(BigInt &&big)
 
 static BigInt toom3(const BigInt &lhs, const BigInt &rhs)
 {
+    static const BigInt three(3);
     const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 3);
     Toom3Mat p(lhs, sz);
     Toom3Mat q(rhs, sz);
@@ -629,7 +619,7 @@ static BigInt toom3(const BigInt &lhs, const BigInt &rhs)
     std::array<BigInt, 5> r;
     r[0] = p.zero;
     r[4] = p.inf;
-    r[3] = (std::move(p.negtwo) - p.one) / Three();
+    r[3] = (std::move(p.negtwo) - p.one) / three;
     r[1] = div2(std::move(p.one) - p.negone);
     r[2] = std::move(p.negone) - std::move(p.zero);
     r[3] = div2(r[2] - r[3]) + (std::move(p.inf) << 1);
