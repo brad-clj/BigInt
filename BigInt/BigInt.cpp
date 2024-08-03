@@ -170,6 +170,8 @@ BigInt::BigInt(unsigned long long num)
 
 BigInt::BigInt(const double num)
 {
+    if (!std::isnormal(num))
+        return;
     int exp;
     auto fr = std::frexp(std::trunc(num), &exp);
     if (fr < 0.0)
