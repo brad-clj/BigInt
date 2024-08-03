@@ -7,53 +7,53 @@
 
 int main()
 {
-    using OpFn = std::function<bool(const BigInt &x,
-                                    const BigInt &y,
+    using OpFn = std::function<bool(BigInt && x,
+                                    BigInt && y,
                                     const BigInt &res)>;
     std::unordered_map<std::string, OpFn> ops{
         {
             "+",
-            [](const BigInt &x,
-               const BigInt &y,
+            [](BigInt &&x,
+               BigInt &&y,
                const BigInt &res)
             {
-                return x + y == res;
+                return std::move(x) + std::move(y) == res;
             },
         },
         {
             "-",
-            [](const BigInt &x,
-               const BigInt &y,
+            [](BigInt &&x,
+               BigInt &&y,
                const BigInt &res)
             {
-                return x - y == res;
+                return std::move(x) - std::move(y) == res;
             },
         },
         {
             "*",
-            [](const BigInt &x,
-               const BigInt &y,
+            [](BigInt &&x,
+               BigInt &&y,
                const BigInt &res)
             {
-                return x * y == res;
+                return std::move(x) * std::move(y) == res;
             },
         },
         {
             "/",
-            [](const BigInt &x,
-               const BigInt &y,
+            [](BigInt &&x,
+               BigInt &&y,
                const BigInt &res)
             {
-                return x / y == res;
+                return std::move(x) / std::move(y) == res;
             },
         },
         {
             "%",
-            [](const BigInt &x,
-               const BigInt &y,
+            [](BigInt &&x,
+               BigInt &&y,
                const BigInt &res)
             {
-                return x % y == res;
+                return std::move(x) % std::move(y) == res;
             },
         },
     };

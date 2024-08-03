@@ -27,7 +27,9 @@ struct BigInt
     BigInt &operator-=(BigInt &&rhs);
     BigInt &operator*=(const BigInt &rhs);
     BigInt &operator/=(const BigInt &rhs);
+    BigInt &operator/=(BigInt &&rhs);
     BigInt &operator%=(const BigInt &rhs);
+    BigInt &operator%=(BigInt &&rhs);
     BigInt &operator&=(const BigInt &rhs);
     BigInt &operator&=(BigInt &&rhs);
     BigInt &operator|=(const BigInt &rhs);
@@ -51,8 +53,14 @@ struct BigInt
     BigInt &&operator-(const BigInt &rhs) &&;
     BigInt &&operator-(BigInt &&rhs) &&;
     BigInt operator*(const BigInt &rhs) const;
-    BigInt operator/(const BigInt &rhs) const;
-    BigInt operator%(const BigInt &rhs) const;
+    BigInt operator/(const BigInt &rhs) const &;
+    BigInt operator/(BigInt &&rhs) const &;
+    BigInt operator/(const BigInt &rhs) &&;
+    BigInt operator/(BigInt &&rhs) &&;
+    BigInt operator%(const BigInt &rhs) const &;
+    BigInt operator%(BigInt &&rhs) const &;
+    BigInt operator%(const BigInt &rhs) &&;
+    BigInt operator%(BigInt &&rhs) &&;
     BigInt operator~() const &;
     BigInt &&operator~() &&;
     BigInt operator&(const BigInt &rhs) const &;
@@ -90,6 +98,9 @@ struct BigInt
     static BigInt fromString(std::string_view str);
     static BigInt fromHex(std::string_view str);
     static DivModRes divmod(const BigInt &lhs, const BigInt &rhs);
+    static DivModRes divmod(const BigInt &lhs, BigInt &&rhs);
+    static DivModRes divmod(BigInt &&lhs, const BigInt &rhs);
+    static DivModRes divmod(BigInt &&lhs, BigInt &&rhs);
 };
 
 struct DivModRes

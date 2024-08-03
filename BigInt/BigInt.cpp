@@ -253,12 +253,22 @@ BigInt &BigInt::operator*=(const BigInt &rhs)
 
 BigInt &BigInt::operator/=(const BigInt &rhs)
 {
-    return *this = *this / rhs;
+    return *this = std::move(*this) / rhs;
+}
+
+BigInt &BigInt::operator/=(BigInt &&rhs)
+{
+    return *this = std::move(*this) / std::move(rhs);
 }
 
 BigInt &BigInt::operator%=(const BigInt &rhs)
 {
-    return *this = *this % rhs;
+    return *this = std::move(*this) % rhs;
+}
+
+BigInt &BigInt::operator%=(BigInt &&rhs)
+{
+    return *this = std::move(*this) % std::move(rhs);
 }
 
 static void bitwise(BigInt &lhs, const BigInt &rhs, const std::function<void(uint32_t &, uint32_t)> &fn)
@@ -652,14 +662,44 @@ BigInt BigInt::operator*(const BigInt &rhs) const
     return res;
 }
 
-BigInt BigInt::operator/(const BigInt &rhs) const
+BigInt BigInt::operator/(const BigInt &rhs) const &
 {
     return divmod(*this, rhs).q;
 }
 
-BigInt BigInt::operator%(const BigInt &rhs) const
+BigInt BigInt::operator/(BigInt &&rhs) const &
+{
+    return divmod(*this, std::move(rhs)).q;
+}
+
+BigInt BigInt::operator/(const BigInt &rhs) &&
+{
+    return divmod(std::move(*this), rhs).q;
+}
+
+BigInt BigInt::operator/(BigInt &&rhs) &&
+{
+    return divmod(std::move(*this), std::move(rhs)).q;
+}
+
+BigInt BigInt::operator%(const BigInt &rhs) const &
 {
     return divmod(*this, rhs).r;
+}
+
+BigInt BigInt::operator%(BigInt &&rhs) const &
+{
+    return divmod(*this, std::move(rhs)).r;
+}
+
+BigInt BigInt::operator%(const BigInt &rhs) &&
+{
+    return divmod(std::move(*this), rhs).r;
+}
+
+BigInt BigInt::operator%(BigInt &&rhs) &&
+{
+    return divmod(std::move(*this), std::move(rhs)).r;
 }
 
 BigInt BigInt::operator~() const &
@@ -1047,8 +1087,24 @@ static bool divmodAddBack(BigInt &r, const BigInt &d, const size_t i)
 
 DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
 {
-    DivModRes res{{}, lhs};
-    auto d = rhs;
+    return divmod(BigInt(lhs), BigInt(rhs));
+}
+
+DivModRes BigInt::divmod(const BigInt &lhs, BigInt &&rhs)
+{
+    return divmod(BigInt(lhs), std::move(rhs));
+}
+
+DivModRes BigInt::divmod(BigInt &&lhs, const BigInt &rhs)
+{
+    return divmod(std::move(lhs), BigInt(rhs));
+}
+
+DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
+{
+    DivModRes res{{}, std::move(lhs)};
+    res.q.isNeg = res.r.isNeg != rhs.isNeg;
+    auto d = std::move(rhs);
     const int s = 32 - bitCount(d.chunks.back());
     res.r <<= s;
     d <<= s;
@@ -1071,8 +1127,6 @@ DivModRes BigInt::divmod(const BigInt &lhs, const BigInt &rhs)
         if (z >> 32)
             addChunkFast(res.q.chunks, j + 1, static_cast<uint32_t>(z >> 32));
     }
-    res.q.isNeg = lhs.isNeg != rhs.isNeg;
-    res.r.isNeg = lhs.isNeg;
     normalize(res.q);
     normalize(res.r);
     res.r >>= s;
