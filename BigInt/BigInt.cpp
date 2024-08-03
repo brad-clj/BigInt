@@ -871,12 +871,7 @@ std::string BigInt::toString() &&
     return res;
 }
 
-std::string BigInt::toHex() const &
-{
-    return BigInt(*this).toHex();
-}
-
-std::string BigInt::toHex() &&
+std::string BigInt::toHex() const
 {
     if (*this == Zero())
         return "0x0";
@@ -884,7 +879,7 @@ std::string BigInt::toHex() &&
     std::vector<std::string> hexChunks(chunks.size(), std::string(8, '0'));
     for (size_t i = 0; i < chunks.size(); ++i)
     {
-        auto &chunk = chunks[i];
+        auto chunk = chunks[i];
         auto &hexChunk = hexChunks[i];
         for (size_t j = hexChunk.size(); j-- && chunk;)
         {

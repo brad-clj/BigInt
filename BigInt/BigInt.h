@@ -83,8 +83,7 @@ struct BigInt
     int64_t toInteger() const;
     std::string toString() const &;
     std::string toString() &&;
-    std::string toHex() const &;
-    std::string toHex() &&;
+    std::string toHex() const;
 
     static BigInt fromString(std::string_view str);
     static BigInt fromHex(std::string_view str);

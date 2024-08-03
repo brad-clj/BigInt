@@ -636,13 +636,12 @@ TEST(BigIntToString, Works)
 
 TEST(BigIntToHex, Works)
 {
-    // rvalue
+    // rvalue and lvalue are passed by const &
     EXPECT_TRUE(BigInt(0).toHex() == "0x0");
     EXPECT_TRUE(BigInt(-1).toHex() == "-0x1");
     EXPECT_TRUE(BigInt::fromString("116243201062464284689812801549962602295").toHex() == "0x5773a04d0e05f6e59bbeefdac80c6737");
     EXPECT_TRUE(BigInt::fromString("-200380197899849194930046467999277295298").toHex() == "-0x96bfd284dbb62aad29ecf18fe5e0a6c2");
     EXPECT_TRUE(BigInt::fromString("241293769526998316206544976813421387230").toHex() == "0xb5877d57408b8ccfc2acab0854c65dde");
-    // lvalue
     BigInt big;
     big = BigInt::fromString("45333991657062742294074377008549958986");
     EXPECT_TRUE(big.toHex() == "0x221b025b224b015ad049d8d06cab954a");
