@@ -819,6 +819,24 @@ void BigInt::invert()
     normalize(*this);
 }
 
+int64_t BigInt::toInteger() const
+{
+    int64_t res = 0;
+    bool borrow = true;
+    for (size_t i = 0; i < 2; ++i)
+    {
+        auto chunk = i < chunks.size() ? chunks[i] : 0;
+        if (isNeg)
+        {
+            if (borrow)
+                borrow = --chunk == static_cast<uint32_t>(-1);
+            chunk = ~chunk;
+        }
+        res |= static_cast<uint64_t>(chunk) << i * 32;
+    }
+    return res;
+}
+
 std::string BigInt::toString() const &
 {
     return BigInt(*this).toString();
@@ -887,7 +905,7 @@ std::string BigInt::toHex() &&
 
 BigInt BigInt::fromString(std::string_view str)
 {
-    constexpr auto exceptionMsg = "BigInt string_view ctor has invalid argument";
+    constexpr auto exceptionMsg = "BigInt fromString has invalid argument";
     bool strIsNeg = str.size() && str[0] == '-';
     if (strIsNeg)
         str.remove_prefix(1);

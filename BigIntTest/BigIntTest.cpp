@@ -22,56 +22,6 @@ TEST(BigIntIntCtor, HandlesLargeNumbers)
     EXPECT_TRUE(BigInt(930'350'724'101'083'004) == BigInt(930'350'724) * BigInt(1'000'000'000) + BigInt(101'083'004));
 }
 
-TEST(BigIntStringCtor, HandlesNegativeNumbers)
-{
-    EXPECT_TRUE(BigInt::fromString("-265906272144445970474687398888444483909") == BigInt::fromString("389385227292137870763754") - BigInt::fromString("265906272144446359859914691026315247663"));
-    EXPECT_TRUE(BigInt::fromString("-259414844928525599982454671789133210796") == BigInt::fromString("-259414844928526044539429364716772824696") + BigInt::fromString("444556974692927639613900"));
-}
-
-TEST(BigIntStringCtor, HandlesLargeNumbers)
-{
-    EXPECT_TRUE(BigInt::fromString("68972475246296519034889131508996078237840293865047801") == BigInt::fromString("689724752462965190348891315") * BigInt::fromString("100000000000000000000000000") + BigInt::fromString("08996078237840293865047801"));
-}
-
-TEST(BigIntStringCtor, ThrowsExceptionOnInvalidArgument)
-{
-    // no payload
-    EXPECT_THROW(BigInt::fromString(""), std::invalid_argument);
-    EXPECT_THROW(BigInt::fromString("-"), std::invalid_argument);
-    // non digit payload
-    EXPECT_THROW(BigInt::fromString("foo"), std::invalid_argument);
-    EXPECT_THROW(BigInt::fromString("0x42"), std::invalid_argument);
-    EXPECT_THROW(BigInt::fromString("123456789012345678901234567890x"), std::invalid_argument);
-    // prefix 0 is fine
-    EXPECT_TRUE(BigInt::fromString("00000000000000000000000000000000000000000") == BigInt(0));
-    EXPECT_TRUE(BigInt::fromString("-000000000000000000000000000000000000000000") == BigInt(0));
-    EXPECT_TRUE(BigInt::fromString("0000000000000000000000000000000000000042") == BigInt(42));
-    EXPECT_TRUE(BigInt::fromString("-00000000000000000000000000000000000000010000") == BigInt(-10000));
-}
-
-TEST(BigIntFromHex, Works)
-{
-    EXPECT_TRUE(BigInt::fromHex("0x0") == BigInt(0));
-    EXPECT_TRUE(BigInt::fromHex("-0x1") == BigInt(-1));
-    EXPECT_TRUE(BigInt::fromHex("-0x0") == BigInt(0));
-    EXPECT_TRUE(BigInt::fromHex("0x55c5210b8a23d4790381a6be9585f134") == BigInt::fromString("114007932356628165534711010869329129780"));
-    EXPECT_TRUE(BigInt::fromHex("-0x13c64e018b4a3d0c48c409f6903c14ce") == BigInt::fromString("-26284988848188709966956935762954425550"));
-    EXPECT_TRUE(BigInt::fromHex("0xda046a5530b7341e8551b16f4c75d865843") == BigInt::fromString("1186998800193267140262124836571720630818883"));
-    EXPECT_TRUE(BigInt::fromHex("-0xa53c3f2ae6006fe9b021ffe899604113db2b2") == BigInt::fromString("-230304449357774213709615252051285371449619122"));
-    // no payload
-    EXPECT_THROW(BigInt::fromHex(""), std::invalid_argument);
-    EXPECT_THROW(BigInt::fromHex("-"), std::invalid_argument);
-    EXPECT_THROW(BigInt::fromHex("0x"), std::invalid_argument);
-    EXPECT_THROW(BigInt::fromHex("-0x"), std::invalid_argument);
-    // garbage payload
-    EXPECT_THROW(BigInt::fromHex("foobar"), std::invalid_argument);
-    EXPECT_THROW(BigInt::fromHex("0xabc12341234ggabc"), std::invalid_argument);
-    EXPECT_THROW(BigInt::fromHex("0xjunk01234567"), std::invalid_argument);
-    // prefix 0 is fine
-    EXPECT_TRUE(BigInt::fromHex("0x0000000000001") == BigInt(1));
-    EXPECT_TRUE(BigInt::fromHex("-0x00000000002") == BigInt(-2));
-}
-
 TEST(BigIntAddOps, AddAssignWorks)
 {
     BigInt acc, other;
@@ -651,6 +601,18 @@ TEST(BigIntCmpOps, CmpWorks)
     EXPECT_TRUE(BigInt::fromString("88807723886191649185632380861854384327") < BigInt::fromString("138670621298285178317743514700496725835"));
 }
 
+TEST(BigIntToInteger, Works)
+{
+    EXPECT_TRUE(BigInt(42).toInteger() == 42);
+    EXPECT_TRUE(BigInt(-42).toInteger() == -42);
+    EXPECT_TRUE(BigInt(-4294967296).toInteger() == -4294967296);
+    EXPECT_TRUE(BigInt(static_cast<int64_t>(0x8000'0000'0000'0000)).toInteger() == static_cast<int64_t>(0x8000'0000'0000'0000));
+    // integer result is just truncated
+    EXPECT_TRUE(BigInt::fromHex("0xffffffffffffffff").toInteger() == -1);
+    EXPECT_TRUE(BigInt::fromHex("0x10000000000000000").toInteger() == 0);
+    EXPECT_TRUE(BigInt::fromHex("0xf000000000000002a").toInteger() == 42);
+}
+
 TEST(BigIntToString, Works)
 {
     // rvalue
@@ -686,4 +648,54 @@ TEST(BigIntToHex, Works)
     EXPECT_TRUE(big.toHex() == "0x221b025b224b015ad049d8d06cab954a");
     big = BigInt::fromString("-180125769058078106111204992277916812536");
     EXPECT_TRUE(big.toHex() == "-0x8782f613b97e3f2167dce937a38a04f8");
+}
+
+TEST(BigIntFromString, HandlesNegativeNumbers)
+{
+    EXPECT_TRUE(BigInt::fromString("-265906272144445970474687398888444483909") == BigInt::fromString("389385227292137870763754") - BigInt::fromString("265906272144446359859914691026315247663"));
+    EXPECT_TRUE(BigInt::fromString("-259414844928525599982454671789133210796") == BigInt::fromString("-259414844928526044539429364716772824696") + BigInt::fromString("444556974692927639613900"));
+}
+
+TEST(BigIntFromString, HandlesLargeNumbers)
+{
+    EXPECT_TRUE(BigInt::fromString("68972475246296519034889131508996078237840293865047801") == BigInt::fromString("689724752462965190348891315") * BigInt::fromString("100000000000000000000000000") + BigInt::fromString("08996078237840293865047801"));
+}
+
+TEST(BigIntFromString, ThrowsExceptionOnInvalidArgument)
+{
+    // no payload
+    EXPECT_THROW(BigInt::fromString(""), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromString("-"), std::invalid_argument);
+    // non digit payload
+    EXPECT_THROW(BigInt::fromString("foo"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromString("0x42"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromString("123456789012345678901234567890x"), std::invalid_argument);
+    // prefix 0 is fine
+    EXPECT_TRUE(BigInt::fromString("00000000000000000000000000000000000000000") == BigInt(0));
+    EXPECT_TRUE(BigInt::fromString("-000000000000000000000000000000000000000000") == BigInt(0));
+    EXPECT_TRUE(BigInt::fromString("0000000000000000000000000000000000000042") == BigInt(42));
+    EXPECT_TRUE(BigInt::fromString("-00000000000000000000000000000000000000010000") == BigInt(-10000));
+}
+
+TEST(BigIntFromHex, Works)
+{
+    EXPECT_TRUE(BigInt::fromHex("0x0") == BigInt(0));
+    EXPECT_TRUE(BigInt::fromHex("-0x1") == BigInt(-1));
+    EXPECT_TRUE(BigInt::fromHex("-0x0") == BigInt(0));
+    EXPECT_TRUE(BigInt::fromHex("0x55c5210b8a23d4790381a6be9585f134") == BigInt::fromString("114007932356628165534711010869329129780"));
+    EXPECT_TRUE(BigInt::fromHex("-0x13c64e018b4a3d0c48c409f6903c14ce") == BigInt::fromString("-26284988848188709966956935762954425550"));
+    EXPECT_TRUE(BigInt::fromHex("0xda046a5530b7341e8551b16f4c75d865843") == BigInt::fromString("1186998800193267140262124836571720630818883"));
+    EXPECT_TRUE(BigInt::fromHex("-0xa53c3f2ae6006fe9b021ffe899604113db2b2") == BigInt::fromString("-230304449357774213709615252051285371449619122"));
+    // no payload
+    EXPECT_THROW(BigInt::fromHex(""), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("-"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("0x"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("-0x"), std::invalid_argument);
+    // garbage payload
+    EXPECT_THROW(BigInt::fromHex("foobar"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("0xabc12341234ggabc"), std::invalid_argument);
+    EXPECT_THROW(BigInt::fromHex("0xjunk01234567"), std::invalid_argument);
+    // prefix 0 is fine
+    EXPECT_TRUE(BigInt::fromHex("0x0000000000001") == BigInt(1));
+    EXPECT_TRUE(BigInt::fromHex("-0x00000000002") == BigInt(-2));
 }

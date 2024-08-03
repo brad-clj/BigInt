@@ -80,6 +80,7 @@ struct BigInt
     void negate();
     void invert();
 
+    int64_t toInteger() const;
     std::string toString() const &;
     std::string toString() &&;
     std::string toHex() const &;
