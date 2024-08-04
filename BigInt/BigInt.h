@@ -9,7 +9,7 @@ struct DivModRes;
 
 struct BigInt
 {
-    std::vector<uint32_t> chunks;
+    std::vector<std::uint32_t> chunks;
     bool isNeg = false;
 
     BigInt();
@@ -36,8 +36,8 @@ struct BigInt
     BigInt &operator|=(BigInt &&rhs);
     BigInt &operator^=(const BigInt &rhs);
     BigInt &operator^=(BigInt &&rhs);
-    BigInt &operator<<=(int64_t n);
-    BigInt &operator>>=(int64_t n);
+    BigInt &operator<<=(std::int64_t n);
+    BigInt &operator>>=(std::int64_t n);
     BigInt &operator++();
     BigInt &operator--();
     BigInt operator++(int);
@@ -75,10 +75,10 @@ struct BigInt
     BigInt &&operator^(BigInt &&rhs) const &;
     BigInt &&operator^(const BigInt &rhs) &&;
     BigInt &&operator^(BigInt &&rhs) &&;
-    BigInt operator<<(int64_t n) const &;
-    BigInt &&operator<<(int64_t n) &&;
-    BigInt operator>>(int64_t n) const &;
-    BigInt &&operator>>(int64_t n) &&;
+    BigInt operator<<(std::int64_t n) const &;
+    BigInt &&operator<<(std::int64_t n) &&;
+    BigInt operator>>(std::int64_t n) const &;
+    BigInt &&operator>>(std::int64_t n) &&;
     explicit operator bool() const;
     bool operator==(const BigInt &rhs) const;
     std::strong_ordering operator<=>(const BigInt &rhs) const &;
@@ -89,7 +89,7 @@ struct BigInt
     void negate();
     void invert();
 
-    int64_t toInteger() const;
+    std::int64_t toInteger() const;
     double toDouble() const;
     std::string toString() const &;
     std::string toString() &&;
@@ -101,7 +101,7 @@ struct BigInt
     static DivModRes divmod(const BigInt &lhs, BigInt &&rhs);
     static DivModRes divmod(BigInt &&lhs, const BigInt &rhs);
     static DivModRes divmod(BigInt &&lhs, BigInt &&rhs);
-    static BigInt pow(const BigInt &base, int64_t exp);
+    static BigInt pow(const BigInt &base, std::int64_t exp);
 };
 
 struct DivModRes
