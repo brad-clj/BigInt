@@ -1038,7 +1038,7 @@ BigInt BigInt::fromHex(std::string_view str)
     return res;
 }
 
-static int bitCount(std::uint32_t x)
+static int mostSigBit(std::uint32_t x)
 {
     if (x == 0)
         return 0;
@@ -1106,7 +1106,7 @@ DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
     DivModRes res{{}, std::move(lhs)};
     res.q.isNeg = res.r.isNeg != rhs.isNeg;
     auto d = std::move(rhs);
-    const int s = 32 - bitCount(d.chunks.back());
+    const int s = 32 - mostSigBit(d.chunks.back());
     res.r <<= s;
     d <<= s;
     if (res.r.chunks.size() + 1 > d.chunks.size())
