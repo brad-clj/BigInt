@@ -536,17 +536,11 @@ struct Toom2Split
 
     Toom2Split(const BigInt &big, const size_t sz)
     {
-        size_t i = 0;
-        low.chunks.resize(std::min(big.chunks.size(), sz));
-        for (; i < big.chunks.size() && i < sz; ++i)
-        {
-            low.chunks[i] = big.chunks[i];
-        }
-        high.chunks.resize(big.chunks.size() - i);
-        for (; i < big.chunks.size(); ++i)
-        {
-            high.chunks[i - sz] = big.chunks[i];
-        }
+        auto iter1 = big.chunks.begin();
+        auto iter2 = std::min(iter1 + sz, big.chunks.end());
+        auto iter3 = big.chunks.end();
+        low.chunks = std::vector<uint32_t>(iter1, iter2);
+        high.chunks = std::vector<uint32_t>(iter2, iter3);
     }
 };
 
@@ -580,22 +574,13 @@ struct Toom3Mat
     Toom3Mat(const BigInt &big, const size_t sz)
     {
         BigInt b0, b1, b2;
-        size_t i = 0;
-        b0.chunks.resize(std::min(big.chunks.size(), sz));
-        for (; i < big.chunks.size() && i < sz; ++i)
-        {
-            b0.chunks[i] = big.chunks[i];
-        }
-        b1.chunks.resize(std::min(big.chunks.size() - i, sz * 2 - i));
-        for (; i < big.chunks.size() && i < sz * 2; ++i)
-        {
-            b1.chunks[i - sz] = big.chunks[i];
-        }
-        b2.chunks.resize(big.chunks.size() - i);
-        for (; i < big.chunks.size(); ++i)
-        {
-            b2.chunks[i - sz * 2] = big.chunks[i];
-        }
+        auto iter1 = big.chunks.begin();
+        auto iter2 = std::min(iter1 + sz, big.chunks.end());
+        auto iter3 = std::min(iter2 + sz, big.chunks.end());
+        auto iter4 = big.chunks.end();
+        b0.chunks = std::vector<uint32_t>(iter1, iter2);
+        b1.chunks = std::vector<uint32_t>(iter2, iter3);
+        b2.chunks = std::vector<uint32_t>(iter3, iter4);
         auto tmp = b0 + b2;
         zero = b0;
         one = tmp + b1;
