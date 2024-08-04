@@ -4,6 +4,7 @@
 #include <charconv>
 #include <cmath>
 #include <functional>
+#include <iterator>
 #include <stdexcept>
 #include <utility>
 
@@ -537,7 +538,7 @@ struct Toom2Split
     Toom2Split(const BigInt &big, const size_t sz)
     {
         auto iter1 = big.chunks.begin();
-        auto iter2 = std::min(iter1 + sz, big.chunks.end());
+        auto iter2 = iter1 + std::min<ptrdiff_t>(sz, std::distance(iter1, big.chunks.end()));
         auto iter3 = big.chunks.end();
         low.chunks = std::vector<uint32_t>(iter1, iter2);
         high.chunks = std::vector<uint32_t>(iter2, iter3);
@@ -575,8 +576,8 @@ struct Toom3Mat
     {
         BigInt b0, b1, b2;
         auto iter1 = big.chunks.begin();
-        auto iter2 = std::min(iter1 + sz, big.chunks.end());
-        auto iter3 = std::min(iter2 + sz, big.chunks.end());
+        auto iter2 = iter1 + std::min<ptrdiff_t>(sz, std::distance(iter1, big.chunks.end()));
+        auto iter3 = iter2 + std::min<ptrdiff_t>(sz, std::distance(iter2, big.chunks.end()));
         auto iter4 = big.chunks.end();
         b0.chunks = std::vector<uint32_t>(iter1, iter2);
         b1.chunks = std::vector<uint32_t>(iter2, iter3);
