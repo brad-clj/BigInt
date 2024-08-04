@@ -95,8 +95,8 @@ static void add(BigInt &acc, const BigInt &other)
 
 static void sub(BigInt &acc, const BigInt &other)
 {
-    if (acc.chunks.size() <= other.chunks.size())
-        acc.chunks.resize(std::max(acc.chunks.size(), other.chunks.size()));
+    if (acc.chunks.size() < other.chunks.size())
+        acc.chunks.resize(other.chunks.size());
     bool hasBorrow = false;
     for (size_t i = 0; i < other.chunks.size(); ++i)
     {
@@ -360,11 +360,13 @@ BigInt &BigInt::operator^=(BigInt &&rhs)
     return *this ^= rhs;
 }
 
-BigInt &BigInt::operator<<=(const size_t n)
+BigInt &BigInt::operator<<=(const int64_t n)
 {
+    if (n < 0)
+        throw std::invalid_argument("BigInt operator<<= has negative shift");
     if (n == 0)
         return *this;
-    const auto off = n / 32;
+    const size_t off = n / 32;
     const auto s = n % 32;
     chunks.resize(chunks.size() + ceilDiv(n, 32));
     for (auto i = chunks.size(); i--;)
@@ -380,11 +382,13 @@ BigInt &BigInt::operator<<=(const size_t n)
     return *this;
 }
 
-BigInt &BigInt::operator>>=(const size_t n)
+BigInt &BigInt::operator>>=(const int64_t n)
 {
+    if (n < 0)
+        throw std::invalid_argument("BigInt operator>>= has negative shift");
     if (n == 0)
         return *this;
-    if (n >= chunks.size() * 32)
+    if (static_cast<size_t>(n) >= chunks.size() * 32)
     {
         chunks.clear();
         if (isNeg)
@@ -393,7 +397,7 @@ BigInt &BigInt::operator>>=(const size_t n)
     }
     if (isNeg)
         subChunkFast(chunks, 0, 1);
-    const auto off = n / 32;
+    const size_t off = n / 32;
     const auto s = n % 32;
     for (size_t i = 0; i < chunks.size(); ++i)
     {
@@ -542,6 +546,8 @@ struct Toom2Split
         auto iter3 = big.chunks.end();
         low.chunks = std::vector<uint32_t>(iter1, iter2);
         high.chunks = std::vector<uint32_t>(iter2, iter3);
+        normalize(low);
+        normalize(high);
     }
 };
 
@@ -582,6 +588,9 @@ struct Toom3Mat
         b0.chunks = std::vector<uint32_t>(iter1, iter2);
         b1.chunks = std::vector<uint32_t>(iter2, iter3);
         b2.chunks = std::vector<uint32_t>(iter3, iter4);
+        normalize(b0);
+        normalize(b1);
+        normalize(b2);
         auto tmp = b0 + b2;
         zero = b0;
         one = tmp + b1;
@@ -791,26 +800,26 @@ BigInt &&BigInt::operator^(BigInt &&rhs) &&
     return std::move(*this ^= rhs);
 }
 
-BigInt BigInt::operator<<(const size_t n) const &
+BigInt BigInt::operator<<(const int64_t n) const &
 {
     auto res = *this;
     res <<= n;
     return res;
 }
 
-BigInt &&BigInt::operator<<(const size_t n) &&
+BigInt &&BigInt::operator<<(const int64_t n) &&
 {
     return std::move(*this <<= n);
 }
 
-BigInt BigInt::operator>>(const size_t n) const &
+BigInt BigInt::operator>>(const int64_t n) const &
 {
     auto res = *this;
     res >>= n;
     return res;
 }
 
-BigInt &&BigInt::operator>>(const size_t n) &&
+BigInt &&BigInt::operator>>(const int64_t n) &&
 {
     return std::move(*this >>= n);
 }
@@ -1117,4 +1126,25 @@ DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
     normalize(res.r);
     res.r >>= s;
     return res;
+}
+
+BigInt BigInt::pow(const BigInt &base, int64_t exp)
+{
+    if (exp < 0)
+        throw std::invalid_argument("BigInt pow has negative exponent");
+    if (exp == 0)
+        return One();
+    auto x = base;
+    auto y = One();
+    while (exp > 1)
+    {
+        if (exp % 2)
+        {
+            y *= x;
+            --exp;
+        }
+        x *= x;
+        exp /= 2;
+    }
+    return x * y;
 }
