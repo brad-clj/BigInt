@@ -1,4 +1,5 @@
 #include <cmath>
+#include <cstdint>
 #include <stdexcept>
 #include <utility>
 #include <gtest/gtest.h>
@@ -658,7 +659,7 @@ TEST(BigIntToInteger, Works)
     EXPECT_TRUE(BigInt(42).toInteger() == 42);
     EXPECT_TRUE(BigInt(-42).toInteger() == -42);
     EXPECT_TRUE(BigInt(-4294967296).toInteger() == -4294967296);
-    EXPECT_TRUE(BigInt(static_cast<int64_t>(0x8000'0000'0000'0000)).toInteger() == static_cast<int64_t>(0x8000'0000'0000'0000));
+    EXPECT_TRUE(BigInt(static_cast<std::int64_t>(0x8000'0000'0000'0000)).toInteger() == static_cast<std::int64_t>(0x8000'0000'0000'0000));
     // integer result is just truncated
     EXPECT_TRUE(BigInt::fromHex("0xffffffffffffffff").toInteger() == -1);
     EXPECT_TRUE(BigInt::fromHex("0x10000000000000000").toInteger() == 0);
