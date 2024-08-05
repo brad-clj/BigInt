@@ -763,13 +763,14 @@ T floatConvert(const BigInt &big)
 {
     T res = 0.0;
     const auto n = sizeof(T) / 4 + 1;
+    constexpr T chunkMag = 4294967296.0;
     for (auto i = big.chunks.size(), j = n; i-- && j--;)
     {
-        res *= static_cast<T>(std::pow(2, 32));
+        res *= chunkMag;
         res += big.chunks[i];
     }
     if (big.chunks.size() > n)
-        res *= static_cast<T>(std::pow(2, 32 * (big.chunks.size() - n)));
+        res *= static_cast<T>(std::pow(chunkMag, big.chunks.size() - n));
     if (big.isNeg)
         res = -res;
     return res;
