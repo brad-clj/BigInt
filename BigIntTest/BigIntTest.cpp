@@ -370,7 +370,8 @@ TEST(BigIntDivModOps, Works)
     EXPECT_TRUE(BigInt(3024112648356590705) / BigInt::fromString("41815209219475073694443040228568777389") == BigInt(0));
     EXPECT_TRUE(BigInt(5385988462955792682) % BigInt::fromString("224364014742806355453492366495645548108") == BigInt(5385988462955792682));
     // these inputs hit divmodAddBack internally
-    EXPECT_TRUE(BigInt::fromString("19122993964741265205004922666831139784902809462") % BigInt(1000000000000000000) == BigInt(831139784902809462));
+    EXPECT_TRUE(BigInt::fromHex("0x80000000ffffffffffffffff0000000000000000000000000000000ffffffffffffffff") / BigInt::fromHex("0x80000000ffffffffffffffffffffffff") == BigInt::fromHex("0xfffffffffffffffffffffffe00000005fffffff"));
+    EXPECT_TRUE(BigInt::fromHex("0x80000000ffffffffffffffff0000000000000000000000000000000ffffffffffffffff") % BigInt::fromHex("0x80000000ffffffffffffffffffffffff") == BigInt::fromHex("0x2000000100000000e00000005ffffffe"));
     // assign
     lhs = BigInt::fromString("190588910553216662708443483383766888162");
     lhs /= BigInt(1959902019257340062);

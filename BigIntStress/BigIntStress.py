@@ -41,7 +41,9 @@ def c_mod(x, y):
 
 def get_num(low, high):
     x = random.randint(low, high)
-    return (random.randint(2 ** ((x - 1) * 32), 2 ** (x * 32)), x)
+    y = random.randint(0, 31)
+    z = random.randint(0, 31)
+    return (random.randint(2 ** ((x - 1) * 32 + y), 2 ** (x * 32 + z)), x)
 
 
 def gen_line(low, high):
