@@ -31,15 +31,22 @@ TEST(BigIntIntCtor, Works)
 
 TEST(BigIntDoubleCtor, Works)
 {
+    BigInt big;
     EXPECT_TRUE(BigInt(0.0) == BigInt(0));
     // double is truncated
     EXPECT_TRUE(BigInt(0.123) == BigInt(0));
     EXPECT_TRUE(BigInt(42.987) == BigInt(42));
     EXPECT_TRUE(BigInt(-100.5) == BigInt(-100));
     // documenting that inf results in zero
-    EXPECT_TRUE(BigInt(std::pow(10, 500)) == BigInt(0));
-    // big numbers
-    EXPECT_TRUE(BigInt(std::pow(10, 300)) == BigInt::fromHex("0x17e43c8800759c00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"));
+    EXPECT_TRUE(BigInt(std::pow(10.0l, 10000)) == BigInt(0));
+    // single
+    EXPECT_TRUE(BigInt(3e+38f) == BigInt::fromHex(std::string("0xe1b1e6") + std::string(26, '0')));
+    // double
+    EXPECT_TRUE(BigInt(1e+308) == BigInt::fromHex(std::string("0x8e679c2f5e45") + std::string(244, '0')));
+    // long
+    big = BigInt(1e+4932l);
+    EXPECT_TRUE(big == BigInt::fromHex(std::string("0xd72cb2a95c7ef6cd") + std::string(4080, '0')) ||
+                big == BigInt(0) /* msvc */);
 }
 
 TEST(BigIntAddOps, AddAssignWorks)

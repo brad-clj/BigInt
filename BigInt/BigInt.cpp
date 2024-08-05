@@ -131,21 +131,22 @@ BigInt::BigInt(unsigned long long num)
     }
 }
 
-BigInt::BigInt(const double num)
+template <typename T>
+void floatConvert(BigInt &big, T t)
 {
-    if (!std::isnormal(num))
+    if (!std::isnormal(t))
         return;
     int exp;
-    auto fr = std::frexp(std::trunc(num), &exp);
+    auto fr = std::frexp(std::trunc(t), &exp);
     if (fr < 0.0)
     {
         fr = -fr;
-        isNeg = true;
+        big.isNeg = true;
     }
-    chunks.resize(ceilDiv(exp, 32));
-    for (std::size_t i = chunks.size(); i--;)
+    big.chunks.resize(ceilDiv(exp, 32));
+    for (std::size_t i = big.chunks.size(); i--;)
     {
-        auto &chunk = chunks[i];
+        auto &chunk = big.chunks[i];
         auto j = exp % 32;
         if (j == 0)
             j = 32;
@@ -167,6 +168,10 @@ BigInt::BigInt(const double num)
         }
     }
 }
+
+BigInt::BigInt(float num) { floatConvert(*this, num); }
+BigInt::BigInt(double num) { floatConvert(*this, num); }
+BigInt::BigInt(long double num) { floatConvert(*this, num); }
 
 BigInt &BigInt::operator+=(const BigInt &rhs)
 {
@@ -753,21 +758,26 @@ std::int64_t BigInt::toInteger() const
     return res;
 }
 
-double BigInt::toDouble() const
+template <typename T>
+T floatConvert(const BigInt &big)
 {
-    double res = 0.0;
-    int n = 3;
-    for (std::size_t i = chunks.size(); i-- && n--;)
+    T res = 0.0;
+    const auto n = sizeof(T) / 4 + 1;
+    for (auto i = big.chunks.size(), j = n; i-- && j--;)
     {
         res *= std::pow(2, 32);
-        res += chunks[i];
+        res += big.chunks[i];
     }
-    if (chunks.size() > 3)
-        res *= std::pow(2, 32 * (chunks.size() - 3));
-    if (isNeg)
+    if (big.chunks.size() > n)
+        res *= std::pow(2, 32 * (big.chunks.size() - n));
+    if (big.isNeg)
         res = -res;
     return res;
 }
+
+float BigInt::toFloat() const { return floatConvert<float>(*this); }
+double BigInt::toDouble() const { return floatConvert<double>(*this); }
+long double BigInt::toLongDouble() const { return floatConvert<long double>(*this); }
 
 std::string BigInt::toString() const & { return BigInt(*this).toString(); }
 
