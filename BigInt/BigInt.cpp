@@ -765,11 +765,11 @@ T floatConvert(const BigInt &big)
     const auto n = sizeof(T) / 4 + 1;
     for (auto i = big.chunks.size(), j = n; i-- && j--;)
     {
-        res *= std::pow(2, 32);
+        res *= static_cast<T>(std::pow(2, 32));
         res += big.chunks[i];
     }
     if (big.chunks.size() > n)
-        res *= std::pow(2, 32 * (big.chunks.size() - n));
+        res *= static_cast<T>(std::pow(2, 32 * (big.chunks.size() - n)));
     if (big.isNeg)
         res = -res;
     return res;

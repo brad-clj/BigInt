@@ -44,7 +44,7 @@ TEST(BigIntDoubleCtor, Works)
     // double
     EXPECT_TRUE(BigInt(1e+308) == BigInt::fromHex(std::string("0x8e679c2f5e45") + std::string(244, '0')));
     // long
-    big = BigInt(1e+4932l);
+    big = BigInt(std::pow(10.l, 4932));
     EXPECT_TRUE(big == BigInt::fromHex(std::string("0xd72cb2a95c7ef6cd") + std::string(4080, '0')) ||
                 big == BigInt(0) /* msvc */);
 }
