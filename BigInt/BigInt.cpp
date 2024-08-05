@@ -903,11 +903,11 @@ static bool divmodMulSub(BigInt &u, const BigInt &v, const std::size_t j, const 
     bool hasBorrow = false;
     for (std::size_t i = 0; i < v.chunks.size(); ++i)
     {
-        auto x = static_cast<uint64_t>(v.chunks[i]) * qhat;
-        if (x && subChunk(u.chunks, i + j, static_cast<uint32_t>(x)))
+        auto x = static_cast<std::uint64_t>(v.chunks[i]) * qhat;
+        if (x && subChunk(u.chunks, i + j, static_cast<std::uint32_t>(x)))
             hasBorrow = true;
         x >>= 32;
-        if (x && subChunk(u.chunks, i + j + 1, static_cast<uint32_t>(x)))
+        if (x && subChunk(u.chunks, i + j + 1, static_cast<std::uint32_t>(x)))
             hasBorrow = true;
     }
     return hasBorrow;
@@ -944,7 +944,7 @@ DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
     {
         std::uint64_t uu = res.r.chunks[j + n - 1];
         if (j + n < res.r.chunks.size())
-            uu |= static_cast<uint64_t>(res.r.chunks[j + n]) << 32;
+            uu |= static_cast<std::uint64_t>(res.r.chunks[j + n]) << 32;
         std::uint64_t qhat = uu / v1;
         std::uint64_t rhat = uu % v1;
         auto u2 = j + n >= 2 ? res.r.chunks[j + n - 2] : 0;
@@ -957,12 +957,12 @@ DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
         }
         if (qhat == 0)
             continue;
-        if (divmodMulSub(res.r, v, j, static_cast<uint32_t>(qhat)))
+        if (divmodMulSub(res.r, v, j, static_cast<std::uint32_t>(qhat)))
             do
                 --qhat;
             while (!divmodAddBack(res.r, v, j));
         normalize(res.r);
-        addChunk(res.q.chunks, j, static_cast<uint32_t>(qhat));
+        addChunk(res.q.chunks, j, static_cast<std::uint32_t>(qhat));
     }
     normalize(res.q);
     res.r >>= d;
