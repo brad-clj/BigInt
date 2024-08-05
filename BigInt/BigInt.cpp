@@ -28,7 +28,7 @@ static const BigInt &One()
 
 static const BigInt &TenQuintillion()
 {
-    static const auto val = BigInt::fromHex("0x8ac7230489e80000");
+    static const BigInt val(10'000'000'000'000'000'000u);
     return val;
 }
 
