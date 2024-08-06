@@ -975,7 +975,7 @@ DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
                 --qhat;
             while (!divmodAddBack(res.r, v, j));
         normalize(res.r);
-        addChunk(res.q.chunks, j, static_cast<std::uint32_t>(qhat));
+        res.q.chunks[j] = static_cast<std::uint32_t>(qhat);
     }
     normalize(res.q);
     res.r >>= d;
