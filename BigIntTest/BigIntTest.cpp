@@ -379,6 +379,8 @@ TEST(BigIntDivModOps, Works)
     // these inputs hit divmodAddBack internally
     EXPECT_TRUE(BigInt::fromHex("0x80000000ffffffffffffffff0000000000000000000000000000000ffffffffffffffff") / BigInt::fromHex("0x80000000ffffffffffffffffffffffff") == BigInt::fromHex("0xfffffffffffffffffffffffe00000005fffffff"));
     EXPECT_TRUE(BigInt::fromHex("0x80000000ffffffffffffffff0000000000000000000000000000000ffffffffffffffff") % BigInt::fromHex("0x80000000ffffffffffffffffffffffff") == BigInt::fromHex("0x2000000100000000e00000005ffffffe"));
+    // div by zero throws
+    EXPECT_THROW(BigInt(42) / BigInt(0), std::invalid_argument);
     // assign
     lhs = BigInt::fromString("190588910553216662708443483383766888162");
     lhs /= BigInt(1959902019257340062);

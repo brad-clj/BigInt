@@ -941,6 +941,8 @@ DivModRes BigInt::divmod(BigInt &&lhs, const BigInt &rhs) { return divmod(std::m
 
 DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
 {
+    if (rhs == Zero())
+        throw std::invalid_argument("BigInt divmod rhs is zero");
     DivModRes res{{}, std::move(lhs)};
     res.q.isNeg = res.r.isNeg != rhs.isNeg;
     const auto d = 32 - mostSigBit(rhs.chunks.back());
