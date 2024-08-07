@@ -8,6 +8,7 @@
 #include <vector>
 #include <cctype>
 #include <optional>
+#include <stdexcept>
 #include "BigInt.h"
 
 int main()
@@ -41,7 +42,18 @@ int main()
         auto &vals = regs[0];
         if (top2(vals, lhs, rhs))
         {
-            auto res = fn(std::move(lhs), std::move(rhs));
+            BigInt res;
+            try
+            {
+                res = fn(std::move(lhs), std::move(rhs));
+            }
+            catch (const std::invalid_argument &e)
+            {
+                std::cout << "exception: " << e.what() << '\n';
+                vals.push_back(std::move(lhs));
+                vals.push_back(std::move(rhs));
+                return;
+            }
             std::cout << out(res) << '\n';
             vals.push_back(std::move(res));
         }
@@ -95,11 +107,22 @@ int main()
                 BigInt lhs, rhs;
                 if (top2(vals, lhs, rhs))
                 {
-                    auto [q, r] = BigInt::divmod(std::move(lhs), std::move(rhs));
-                    std::cout << out(q) << '\n';
-                    vals.push_back(std::move(q));
-                    std::cout << out(r) << '\n';
-                    vals.push_back(std::move(r));
+                    DivModRes res;
+                    try
+                    {
+                        res = BigInt::divmod(std::move(lhs), std::move(rhs));
+                    }
+                    catch (const std::invalid_argument &e)
+                    {
+                        std::cout << "exception: " << e.what() << '\n';
+                        vals.push_back(std::move(lhs));
+                        vals.push_back(std::move(rhs));
+                        return;
+                    }
+                    std::cout << out(res.q) << '\n';
+                    vals.push_back(std::move(res.q));
+                    std::cout << out(res.r) << '\n';
+                    vals.push_back(std::move(res.r));
                 }
             },
         },
