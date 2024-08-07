@@ -9,6 +9,8 @@
 #include <cctype>
 #include <optional>
 #include <stdexcept>
+#include <sstream>
+#include <unordered_set>
 #include "BigInt.h"
 
 int main()
@@ -54,7 +56,6 @@ int main()
                 vals.push_back(std::move(rhs));
                 return;
             }
-            std::cout << out(res) << '\n';
             vals.push_back(std::move(res));
         }
     };
@@ -119,9 +120,7 @@ int main()
                         vals.push_back(std::move(rhs));
                         return;
                     }
-                    std::cout << out(res.q) << '\n';
                     vals.push_back(std::move(res.q));
-                    std::cout << out(res.r) << '\n';
                     vals.push_back(std::move(res.r));
                 }
             },
@@ -133,11 +132,7 @@ int main()
                 auto &vals = regs[0];
                 BigInt rhs;
                 if (top1(vals, rhs))
-                {
-                    auto res = ~std::move(rhs);
-                    std::cout << out(res) << '\n';
-                    vals.push_back(std::move(res));
-                }
+                    vals.push_back(~std::move(rhs));
             },
         },
         {
@@ -183,17 +178,6 @@ int main()
     };
     std::unordered_map<std::string, std::function<void()>> mainOps{
         {
-            "h",
-            [&]()
-            {
-                std::cout << "math ops: + - * ** / % /% ~ & | ^ << >>\n"
-                          << "stack ops: s (swap), u (rotate up), d (rotate down), p (pop), c (copy)\n"
-                          << "memory ops: st (store), ld (load)\n"
-                          << "output ops: l (list), t (top), dec, hex\n"
-                          << "reset (to clear everything)\n";
-            },
-        },
-        {
             "hex",
             [&]()
             { hex = true; },
@@ -209,12 +193,12 @@ int main()
             { regs = std::vector<std::deque<BigInt>>(10); },
         },
     };
-    std::unordered_map<std::string, std::function<void(const std::optional<std::size_t> &)>> regOps{
+    std::unordered_map<std::string, std::function<void(std::size_t)>> regOps{
         {
             "s",
-            [&](const std::optional<std::size_t> &i)
+            [&](const std::size_t i)
             {
-                auto &vals = regs[i.value_or(0)];
+                auto &vals = regs[i];
                 BigInt lhs, rhs;
                 if (top2(vals, lhs, rhs))
                 {
@@ -225,9 +209,9 @@ int main()
         },
         {
             "u",
-            [&](const std::optional<std::size_t> &i)
+            [&](const std::size_t i)
             {
-                auto &vals = regs[i.value_or(0)];
+                auto &vals = regs[i];
                 if (vals.size() >= 2)
                 {
                     auto &val = vals.front();
@@ -238,9 +222,9 @@ int main()
         },
         {
             "d",
-            [&](const std::optional<std::size_t> &i)
+            [&](const std::size_t i)
             {
-                auto &vals = regs[i.value_or(0)];
+                auto &vals = regs[i];
                 if (vals.size() >= 2)
                 {
                     auto &val = vals.back();
@@ -251,9 +235,9 @@ int main()
         },
         {
             "p",
-            [&](const std::optional<std::size_t> &i)
+            [&](const std::size_t i)
             {
-                auto &vals = regs[i.value_or(0)];
+                auto &vals = regs[i];
                 if (vals.size() >= 1)
                 {
                     vals.pop_back();
@@ -262,43 +246,52 @@ int main()
         },
         {
             "c",
-            [&](const std::optional<std::size_t> &i)
+            [&](const std::size_t i)
             {
-                auto &vals = regs[i.value_or(0)];
+                auto &vals = regs[i];
                 if (vals.size() >= 1)
                 {
                     vals.push_back(vals.back());
                 }
             },
         },
+    };
+    std::unordered_set<std::string> outOps{"l", "t", "h", "quit"};
+    auto outList = [&](const std::size_t i)
+    {
+        auto &vals = regs[i];
+        for (const auto &val : vals)
         {
-            "l",
-            [&](const std::optional<std::size_t> &i)
-            {
-                auto &vals = regs[i.value_or(0)];
-                for (const auto &val : vals)
-                {
-                    std::cout << out(val) << '\n';
-                }
-            },
-        },
+            std::cout << out(val) << '\n';
+        }
+    };
+    auto outTop = [&](const std::size_t i)
+    {
+        auto &vals = regs[i];
+        for (auto j = vals.size() > 2 ? vals.size() - 2 : 0; j < vals.size(); ++j)
         {
-            "t",
-            [&](const std::optional<std::size_t> &i)
-            {
-                auto &vals = regs[i.value_or(0)];
-                for (auto j = vals.size() > 2 ? vals.size() - 2 : 0; j < vals.size(); ++j)
-                {
-                    std::cout << out(vals[j]) << '\n';
-                }
-            },
-        },
+            std::cout << out(vals[j]) << '\n';
+        }
+    };
+    auto outHelp = [&]()
+    {
+        std::cout << "math ops:\n"
+                  << "    +, -, *, **, /, %, /%, ~, &, |, ^, <<, >>\n"
+                  << "stack ops:\n"
+                  << "    s (swap), u (rotate up), d (rotate down), p (pop), c (copy)\n"
+                  << "memory ops:\n"
+                  << "    st (store), ld (load)\n"
+                  << "output ops:\n"
+                  << "    l (list), t (top), dec, hex\n"
+                  << "reset (to clear everything), quit (to quit)\n";
+    };
+    std::unordered_map<std::string, std::function<void(std::size_t)>> memOps{
         {
             "st",
-            [&](const std::optional<std::size_t> &i)
+            [&](const std::size_t i)
             {
                 auto &main = regs[0];
-                auto &vals = regs[i.value_or(1)];
+                auto &vals = regs[i];
                 if (main.size() >= 1)
                 {
                     auto val = std::move(main.back());
@@ -309,10 +302,10 @@ int main()
         },
         {
             "ld",
-            [&](const std::optional<std::size_t> &i)
+            [&](const std::size_t i)
             {
                 auto &main = regs[0];
-                auto &vals = regs[i.value_or(1)];
+                auto &vals = regs[i];
                 if (vals.size() >= 1)
                 {
                     auto val = std::move(vals.back());
@@ -346,46 +339,93 @@ int main()
             return false;
         }
     };
-    std::string input;
-    while (std::cin >> input)
+    auto prompt = [](std::stringstream &ss)
     {
-        if (input.size() && std::isalpha(input[0]))
+        std::cout << "> ";
+        std::string line;
+        auto res = static_cast<bool>(std::getline(std::cin, line));
+        ss.clear();
+        ss.str(line);
+        return res;
+    };
+    std::stringstream ss;
+    while (prompt(ss))
+    {
+        std::string input;
+        std::size_t lastIdx = 0;
+        std::string outType = "t";
+        while (ss >> input)
         {
-            std::string_view sv = input;
-            std::optional<std::size_t> idx;
-            if (std::isdigit(sv.back()))
+            lastIdx = 0;
+            outType = "t";
+            if (input.size() && std::isalpha(input[0]))
             {
-                idx = static_cast<std::size_t>(sv.back() - '0');
-                sv.remove_suffix(1);
+                std::string_view sv = input;
+                std::optional<std::size_t> idx;
+                if (std::isdigit(sv.back()))
+                {
+                    idx = static_cast<std::size_t>(sv.back() - '0');
+                    sv.remove_suffix(1);
+                }
+                std::string op(sv);
+                if (auto mainIter = mainOps.find(op); mainIter != mainOps.end())
+                {
+                    mainIter->second();
+                    continue;
+                }
+                if (auto regIter = regOps.find(op); regIter != regOps.end())
+                {
+                    lastIdx = idx.value_or(0);
+                    regIter->second(idx.value_or(0));
+                    continue;
+                }
+                if (auto memIter = memOps.find(op); memIter != memOps.end())
+                {
+                    memIter->second(idx.value_or(1));
+                    continue;
+                }
+                if (auto outIter = outOps.find(op); outIter != outOps.end())
+                {
+                    lastIdx = idx.value_or(0);
+                    outType = *outIter;
+                    continue;
+                }
             }
-            std::string op(sv);
-            if (auto mainIter = mainOps.find(op); mainIter != mainOps.end())
+            if (auto mathIter = mathOps.find(input); mathIter != mathOps.end())
             {
-                mainIter->second();
+                mathIter->second();
                 continue;
             }
-            if (auto regIter = regOps.find(op); regIter != regOps.end())
+            BigInt val;
+            if (fs(input, val))
             {
-                regIter->second(idx);
+                regs[0].push_back(val);
                 continue;
             }
+            if (fh(input, val))
+            {
+                regs[0].push_back(val);
+                continue;
+            }
+            std::cout << "unknown op " << input << '\n';
         }
-        if (auto mathIter = mathOps.find(input); mathIter != mathOps.end())
+        switch (outType.size() ? outType[0] : '\0')
         {
-            mathIter->second();
-            continue;
+        case 'l':
+            outList(lastIdx);
+            break;
+        case 't':
+            outTop(lastIdx);
+            break;
+        case 'h':
+            outHelp();
+            break;
+        case 'q':
+            goto end;
+            break;
         }
-        BigInt val;
-        if (fs(input, val))
-        {
-            regs[0].push_back(val);
-            continue;
-        }
-        if (fh(input, val))
-        {
-            regs[0].push_back(val);
-            continue;
-        }
-        std::cout << "invalid op " << input << '\n';
     }
+    std::cout << '\n';
+end:
+    std::cout << "goodbye\n";
 }
