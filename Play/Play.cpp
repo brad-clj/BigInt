@@ -275,7 +275,13 @@ int main()
     };
     auto outHelp = [&]()
     {
-        std::cout << "math ops:\n"
+        std::cout << "There are 10 stacks. 0 is the primary stack and math ops are\n"
+                  << "only available to stack 0. l, t, and stack ops default to 0,\n"
+                  << "and memory ops default to 1. But those ops can be applied to\n"
+                  << "a specific stack by adding a digit suffix to the op (e.g. s1\n"
+                  << "to swap on stack 1).\n"
+                  << '\n'
+                  << "math ops:\n"
                   << "    +, -, *, **, /, %, /%, ~, &, |, ^, <<, >>\n"
                   << "stack ops:\n"
                   << "    s (swap), u (rotate up), d (rotate down), p (pop), c (copy)\n"
