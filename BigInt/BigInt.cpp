@@ -223,38 +223,31 @@ BigInt &BigInt::operator/=(BigInt &&rhs) { return *this = std::move(*this) / std
 BigInt &BigInt::operator%=(const BigInt &rhs) { return *this = std::move(*this) % rhs; }
 BigInt &BigInt::operator%=(BigInt &&rhs) { return *this = std::move(*this) % std::move(rhs); }
 
+static void bitwiseNormalizeNeg(bool &borrow, std::uint32_t &n)
+{
+    if (borrow)
+        borrow = --n == static_cast<std::uint32_t>(-1);
+    n = ~n;
+}
+
 static void bitwise(BigInt &lhs, const BigInt &rhs, const std::function<void(std::uint32_t &, std::uint32_t)> &fn)
 {
     std::uint32_t x = lhs.isNeg ? static_cast<std::uint32_t>(-1) : 0;
     fn(x, rhs.isNeg ? static_cast<std::uint32_t>(-1) : 0);
     bool resIsNeg = static_cast<bool>(x);
     lhs.chunks.resize(std::max(lhs.chunks.size(), rhs.chunks.size()) + (resIsNeg ? 1 : 0));
-    bool lhsBorrow = lhs.isNeg;
-    bool rhsBorrow = rhs.isNeg;
-    bool resBorrow = resIsNeg;
+    bool lhsBorrow = true, rhsBorrow = true, resBorrow = true;
     for (std::size_t i = 0; i < lhs.chunks.size(); ++i)
     {
         auto &a = lhs.chunks[i];
         if (lhs.isNeg)
-        {
-            if (lhsBorrow)
-                lhsBorrow = --a == static_cast<std::uint32_t>(-1);
-            a = ~a;
-        }
+            bitwiseNormalizeNeg(lhsBorrow, a);
         auto b = i < rhs.chunks.size() ? rhs.chunks[i] : 0;
         if (rhs.isNeg)
-        {
-            if (rhsBorrow)
-                rhsBorrow = --b == static_cast<std::uint32_t>(-1);
-            b = ~b;
-        }
+            bitwiseNormalizeNeg(rhsBorrow, b);
         fn(a, b);
         if (resIsNeg)
-        {
-            if (resBorrow)
-                resBorrow = --a == static_cast<std::uint32_t>(-1);
-            a = ~a;
-        }
+            bitwiseNormalizeNeg(resBorrow, a);
     }
     lhs.isNeg = resIsNeg;
     normalize(lhs);
