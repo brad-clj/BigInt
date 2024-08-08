@@ -1,16 +1,16 @@
-#include <iostream>
-#include <string>
-#include <unordered_map>
-#include <functional>
-#include <utility>
-#include <string_view>
-#include <deque>
-#include <vector>
 #include <cctype>
+#include <cstddef>
+#include <deque>
+#include <functional>
+#include <iostream>
 #include <optional>
 #include <stdexcept>
+#include <string>
+#include <string_view>
 #include <sstream>
-#include <unordered_set>
+#include <unordered_map>
+#include <utility>
+#include <vector>
 #include "BigInt.h"
 
 static bool prompt(std::stringstream &ss)
@@ -152,11 +152,11 @@ struct Calc
         std::cout << '\n';
     }
 
-    static std::unordered_map<std::string, void (*)(Calc &)> mathOps;
-    static std::unordered_map<std::string, void (*)(Calc &)> mainOps;
-    static std::unordered_map<std::string, void (*)(Calc &, std::size_t)> regOps;
-    static std::unordered_map<std::string, void (*)(Calc &, std::size_t)> memOps;
-    static std::unordered_map<std::string, bool (*)(Calc &, std::size_t)> outOps;
+    static const std::unordered_map<std::string, void (*)(Calc &)> mathOps;
+    static const std::unordered_map<std::string, void (*)(Calc &)> mainOps;
+    static const std::unordered_map<std::string, void (*)(Calc &, std::size_t)> regOps;
+    static const std::unordered_map<std::string, void (*)(Calc &, std::size_t)> memOps;
+    static const std::unordered_map<std::string, bool (*)(Calc &, std::size_t)> outOps;
 };
 
 static void math(Calc &calc, const std::function<BigInt(BigInt &&lhs, BigInt &&rhs)> &fn)
@@ -289,7 +289,7 @@ static void mathShiftR(Calc &calc)
          { return std::move(lhs) >> std::move(rhs).toInteger(); });
 }
 
-std::unordered_map<std::string, void (*)(Calc &)> Calc::mathOps{
+const std::unordered_map<std::string, void (*)(Calc &)> Calc::mathOps{
     {"+", mathAdd},
     {"-", mathSub},
     {"*", mathMul},
@@ -320,7 +320,7 @@ static void mainReset(Calc &calc)
     calc.regs = Calc::RegsType(10);
 }
 
-std::unordered_map<std::string, void (*)(Calc &)> Calc::mainOps{
+const std::unordered_map<std::string, void (*)(Calc &)> Calc::mainOps{
     {"hex", mainHex},
     {"dec", mainDec},
     {"reset", mainReset},
@@ -377,7 +377,7 @@ static void regCopy(Calc &calc, std::size_t i)
     }
 }
 
-std::unordered_map<std::string, void (*)(Calc &, std::size_t)> Calc::regOps{
+const std::unordered_map<std::string, void (*)(Calc &, std::size_t)> Calc::regOps{
     {"s", regSwap},
     {"u", regRotateUp},
     {"d", regRotateDown},
@@ -409,7 +409,7 @@ static void memLoad(Calc &calc, std::size_t i)
     }
 }
 
-std::unordered_map<std::string, void (*)(Calc &, std::size_t)> Calc::memOps{
+const std::unordered_map<std::string, void (*)(Calc &, std::size_t)> Calc::memOps{
     {"st", memStore},
     {"ld", memLoad},
 };
@@ -456,7 +456,7 @@ static bool outHelp(Calc &, std::size_t)
 
 static bool outQuit(Calc &, std::size_t) { return true; }
 
-std::unordered_map<std::string, bool (*)(Calc &, std::size_t)> Calc::outOps{
+const std::unordered_map<std::string, bool (*)(Calc &, std::size_t)> Calc::outOps{
     {"l", outList},
     {"t", outTop},
     {"h", outHelp},
