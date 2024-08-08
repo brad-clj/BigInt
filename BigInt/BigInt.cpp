@@ -1001,3 +1001,23 @@ BigInt BigInt::pow(const BigInt &base, std::int64_t exp)
     }
     return x * y;
 }
+
+std::size_t std::hash<BigInt>::operator()(const BigInt &val) const noexcept
+{
+    constexpr std::size_t sz = 32;
+    const auto mid = val.chunks.size() / 2;
+    std::hash<std::uint32_t> u32Hash;
+    std::size_t h1 = 0;
+    for (auto i = mid <= sz ? mid : sz; i--;)
+    {
+        h1 <<= 2;
+        h1 ^= u32Hash(val.chunks[i]);
+    }
+    std::size_t h2 = 0;
+    for (auto i = mid <= sz ? mid : val.chunks.size() - sz; i < val.chunks.size(); ++i)
+    {
+        h2 <<= 2;
+        h2 ^= u32Hash(val.chunks[i]);
+    }
+    return std::hash<bool>{}(val.isNeg) ^ h1 << 1 ^ h2 << 2;
+}
