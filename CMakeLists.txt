@@ -26,4 +26,4 @@ add_subdirectory(BigInt)
 add_subdirectory(BigIntTest)
 add_subdirectory(BigIntStress)
 
-add_subdirectory(Play)
+add_subdirectory(RpnCalc)
