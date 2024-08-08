@@ -87,11 +87,11 @@ struct Calc
         {
             std::string input;
             std::size_t lastIdx = 0;
-            std::string outType = "t";
+            std::string outOp = "t";
             while (ss >> input)
             {
                 lastIdx = 0;
-                outType = "t";
+                outOp = "t";
                 if (input.size() && std::isalpha(input[0]))
                 {
                     std::string_view sv = input;
@@ -121,7 +121,7 @@ struct Calc
                     if (auto outIter = outOps.find(op); outIter != outOps.end())
                     {
                         lastIdx = idx.value_or(0);
-                        outType = std::move(op);
+                        outOp = std::move(op);
                         continue;
                     }
                 }
@@ -143,7 +143,7 @@ struct Calc
                 }
                 std::cout << "unknown op " << input << '\n';
             }
-            if (auto outIter = outOps.find(outType); outIter != outOps.end())
+            if (auto outIter = outOps.find(outOp); outIter != outOps.end())
             {
                 if (outIter->second(*this, lastIdx))
                     return;
