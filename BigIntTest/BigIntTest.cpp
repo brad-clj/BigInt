@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cstdint>
 #include <stdexcept>
+#include <unordered_set>
 #include <utility>
 #include <gtest/gtest.h>
 #include "BigInt.h"
@@ -801,4 +802,18 @@ TEST(BigIntPow, Works)
     EXPECT_TRUE(BigInt::pow(BigInt(-42), 0) == BigInt(1));
     // neg
     EXPECT_THROW(BigInt::pow(BigInt(42), -1), std::invalid_argument);
+}
+
+TEST(BigInt, IsHashable)
+{
+    std::unordered_set<BigInt> xs;
+    xs.insert(42);
+    constexpr auto bigStr1 = "0xae499003d19e16f85f5dd3a2bf34a429c5db5cf75853342b96e7fca7ace1f08c0790c8572b786bc4157fe2be4e313f26472356b7bc4cf426978c0592a1f3b0c1510559d7e52f5fa4438bf775ab74e83996f90dee41206855f05ffaeff340aa0281d8f1a36fb99ae1c81998508d5c3a0104272b5c664dd76f3c12c6a140b269120d5d9824911a50b8eb817339688a861e3b78f83d6a9be64695692e06409edea9852ba5eaf330f7566e4f5084dbe939394659b03f8facd57c6e3cfcda3273ffb044dc518de5d9f0355d923ddc3ba01e6501a7183139bb8e7c7a2d834bdc02d86df0f8195d7fb75709c5cb90c4c6805aaa65171da0665f8a020a678de45a0d50cf";
+    xs.insert(BigInt::fromHex(bigStr1));
+    constexpr auto bigStr2 = "0x173c24dfcad5f828e885ac535967f707d1ad9cd3ddfbdc21d550a878fdf92343acf0fe70143fccd0ea6a6520d89e7c1e2d29ba978d9f1f511d5111df36e4b35f4f006fb7e1d0aa32f6d770b099721888fdaa3a3f89505ce870eabbdfe5301caac95be07489946170ebe5f910f24e394c479c766afb58f9846ad251f24fdf1a86b8c156f6489fb4e683a3fe2fa71debce4e7a8afeb523cc8428f69af96a36a886c9cf7ad3635bc373f66aadf9a98a282a95c92f5479e222c281f7da3bb4bc3d1e2cac00f67e7826442ab94a4efb985b85d1bdedb8538bfd08024b525d2c2460eaa55128d0a124333d1273cc7e7e0d430c8520d055a10dbdd29b43a26a7cfb5e4babf228af1152bf49a643b234e5e080dd47015312f593b25d5e5ec6711d6f4f1531ed070e7c03f6628075790939c6b2575ce8ec0747684af95d7ea73c4581ef4dba4f3773057cf267b80e078e96f9a99e32559ca5673f251fbb108f1755c8aa2d435f9228f9dd3edd53f2803d0618103b1bbf8d8c30051875e8febb289be50ccd";
+    xs.insert(BigInt::fromHex(bigStr2));
+    EXPECT_FALSE(xs.contains(BigInt(0)));
+    EXPECT_TRUE(xs.contains(BigInt(42)));
+    EXPECT_TRUE(xs.contains(BigInt::fromHex(bigStr1)));
+    EXPECT_TRUE(xs.contains(BigInt::fromHex(bigStr2)));
 }

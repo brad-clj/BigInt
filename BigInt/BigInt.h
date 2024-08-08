@@ -113,3 +113,9 @@ struct DivModRes
     BigInt q;
     BigInt r;
 };
+
+template <>
+struct std::hash<BigInt>
+{
+    std::size_t operator()(const BigInt &val) const noexcept;
+};
