@@ -21,7 +21,7 @@ static bool prompt(std::stringstream &ss)
     ss.clear();
     ss.str(line);
     return res;
-};
+}
 
 static bool top2(std::deque<BigInt> &vals, BigInt &lhs, BigInt &rhs)
 {
@@ -32,7 +32,7 @@ static bool top2(std::deque<BigInt> &vals, BigInt &lhs, BigInt &rhs)
     lhs = std::move(vals.back());
     vals.pop_back();
     return true;
-};
+}
 
 static bool top1(std::deque<BigInt> &vals, BigInt &top)
 {
@@ -41,7 +41,7 @@ static bool top1(std::deque<BigInt> &vals, BigInt &top)
     top = std::move(vals.back());
     vals.pop_back();
     return true;
-};
+}
 
 static bool fromString(std::string_view str, BigInt &out)
 {
