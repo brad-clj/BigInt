@@ -173,55 +173,62 @@ BigInt::BigInt(float num) { floatConvert(*this, num); }
 BigInt::BigInt(double num) { floatConvert(*this, num); }
 BigInt::BigInt(long double num) { floatConvert(*this, num); }
 
-BigInt &BigInt::operator+=(const BigInt &rhs)
+BigInt &BigInt::operator+=(const BigInt &other)
 {
-    if (this == &rhs)
+    if (this == &other)
     {
-        auto rhsCopy = rhs;
+        auto rhsCopy = other;
         return *this += rhsCopy;
     }
-    if (isNeg == rhs.isNeg)
-        add(*this, rhs);
+    if (isNeg == other.isNeg)
+        add(*this, other);
     else
-        sub(*this, rhs);
+        sub(*this, other);
     return *this;
 }
 
-BigInt &BigInt::operator+=(BigInt &&rhs)
+BigInt &BigInt::operator+=(BigInt &&other)
 {
-    if (rhs.chunks.capacity() > chunks.capacity())
-        std::swap(*this, rhs);
-    return *this += rhs;
+    if (other.chunks.capacity() > chunks.capacity())
+        std::swap(*this, other);
+    return *this += other;
 }
 
-BigInt &BigInt::operator-=(const BigInt &rhs)
+BigInt &BigInt::operator-=(const BigInt &other)
 {
-    if (this == &rhs)
+    if (this == &other)
         return *this = Zero();
-    if (isNeg != rhs.isNeg)
-        add(*this, rhs);
+    if (isNeg != other.isNeg)
+        add(*this, other);
     else
-        sub(*this, rhs);
+        sub(*this, other);
     return *this;
 }
 
-BigInt &BigInt::operator-=(BigInt &&rhs)
+BigInt &BigInt::operator-=(BigInt &&other)
 {
-    if (rhs.chunks.capacity() > chunks.capacity())
+    if (other.chunks.capacity() > chunks.capacity())
     {
-        std::swap(*this, rhs);
+        std::swap(*this, other);
         negate();
-        return *this += rhs;
+        return *this += other;
     }
-    return *this -= rhs;
+    return *this -= other;
 }
 
-BigInt &BigInt::operator*=(const BigInt &rhs) { return *this = *this * rhs; }
+BigInt &BigInt::operator*=(const BigInt &other) { return *this = *this * other; }
 
-BigInt &BigInt::operator/=(const BigInt &rhs) { return *this = std::move(*this) / rhs; }
-BigInt &BigInt::operator/=(BigInt &&rhs) { return *this = std::move(*this) / std::move(rhs); }
-BigInt &BigInt::operator%=(const BigInt &rhs) { return *this = std::move(*this) % rhs; }
-BigInt &BigInt::operator%=(BigInt &&rhs) { return *this = std::move(*this) % std::move(rhs); }
+BigInt &BigInt::operator/=(const BigInt &other) { return *this = std::move(*this) / other; }
+BigInt &BigInt::operator/=(BigInt &&other) { return *this = std::move(*this) / std::move(other); }
+BigInt &BigInt::operator%=(const BigInt &other) { return *this = std::move(*this) % other; }
+BigInt &BigInt::operator%=(BigInt &&other) { return *this = std::move(*this) % std::move(other); }
+
+static void bitwiseNormalizeNeg(bool &borrow, std::uint32_t &n)
+{
+    if (borrow)
+        borrow = --n == static_cast<std::uint32_t>(-1);
+    n = ~n;
+}
 
 static void bitwise(BigInt &lhs, const BigInt &rhs, const std::function<void(std::uint32_t &, std::uint32_t)> &fn)
 {
@@ -229,86 +236,72 @@ static void bitwise(BigInt &lhs, const BigInt &rhs, const std::function<void(std
     fn(x, rhs.isNeg ? static_cast<std::uint32_t>(-1) : 0);
     bool resIsNeg = static_cast<bool>(x);
     lhs.chunks.resize(std::max(lhs.chunks.size(), rhs.chunks.size()) + (resIsNeg ? 1 : 0));
-    bool lhsBorrow = lhs.isNeg;
-    bool rhsBorrow = rhs.isNeg;
-    bool resBorrow = resIsNeg;
+    bool lhsBorrow = true, rhsBorrow = true, resBorrow = true;
     for (std::size_t i = 0; i < lhs.chunks.size(); ++i)
     {
         auto &a = lhs.chunks[i];
         if (lhs.isNeg)
-        {
-            if (lhsBorrow)
-                lhsBorrow = --a == static_cast<std::uint32_t>(-1);
-            a = ~a;
-        }
+            bitwiseNormalizeNeg(lhsBorrow, a);
         auto b = i < rhs.chunks.size() ? rhs.chunks[i] : 0;
         if (rhs.isNeg)
-        {
-            if (rhsBorrow)
-                rhsBorrow = --b == static_cast<std::uint32_t>(-1);
-            b = ~b;
-        }
+            bitwiseNormalizeNeg(rhsBorrow, b);
         fn(a, b);
         if (resIsNeg)
-        {
-            if (resBorrow)
-                resBorrow = --a == static_cast<std::uint32_t>(-1);
-            a = ~a;
-        }
+            bitwiseNormalizeNeg(resBorrow, a);
     }
     lhs.isNeg = resIsNeg;
     normalize(lhs);
 }
 
-BigInt &BigInt::operator&=(const BigInt &rhs)
+BigInt &BigInt::operator&=(const BigInt &other)
 {
-    if (this == &rhs)
+    if (this == &other)
         return *this;
-    bitwise(*this, rhs,
+    bitwise(*this, other,
             [](std::uint32_t &a, std::uint32_t b)
             { a &= b; });
     return *this;
 }
 
-BigInt &BigInt::operator&=(BigInt &&rhs)
+BigInt &BigInt::operator&=(BigInt &&other)
 {
-    if (rhs.chunks.capacity() > chunks.capacity())
-        std::swap(*this, rhs);
-    return *this &= rhs;
+    if (other.chunks.capacity() > chunks.capacity())
+        std::swap(*this, other);
+    return *this &= other;
 }
 
-BigInt &BigInt::operator|=(const BigInt &rhs)
+BigInt &BigInt::operator|=(const BigInt &other)
 {
-    if (this == &rhs)
+    if (this == &other)
         return *this;
-    bitwise(*this, rhs,
+    bitwise(*this, other,
             [](std::uint32_t &a, std::uint32_t b)
             { a |= b; });
     return *this;
 }
 
-BigInt &BigInt::operator|=(BigInt &&rhs)
+BigInt &BigInt::operator|=(BigInt &&other)
 {
-    if (rhs.chunks.capacity() > chunks.capacity())
-        std::swap(*this, rhs);
-    return *this |= rhs;
+    if (other.chunks.capacity() > chunks.capacity())
+        std::swap(*this, other);
+    return *this |= other;
 }
 
-BigInt &BigInt::operator^=(const BigInt &rhs)
+BigInt &BigInt::operator^=(const BigInt &other)
 {
-    if (this == &rhs)
+    if (this == &other)
         return *this = Zero();
-    bitwise(*this, rhs,
+    bitwise(*this, other,
             [](std::uint32_t &a, std::uint32_t b)
             { a ^= b; });
     return *this;
 }
 
-BigInt &BigInt::operator^=(BigInt &&rhs)
+BigInt &BigInt::operator^=(BigInt &&other)
 {
-    if (rhs.chunks.capacity() > chunks.capacity())
-        std::swap(*this, rhs);
-    return *this ^= rhs;
+    if (other.chunks.capacity() > chunks.capacity())
+        std::swap(*this, other);
+    return *this ^= other;
 }
 
 BigInt &BigInt::operator<<=(const std::int64_t n)
@@ -395,210 +388,6 @@ BigInt BigInt::operator-() &&
     return std::move(*this);
 }
 
-BigInt BigInt::operator+(const BigInt &rhs) const &
-{
-    if (rhs.chunks.size() > chunks.size())
-    {
-        auto res = rhs;
-        res += *this;
-        return res;
-    }
-    auto res = *this;
-    res += rhs;
-    return res;
-}
-
-BigInt BigInt::operator+(BigInt &&rhs) const & { return std::move(rhs += *this); }
-BigInt BigInt::operator+(const BigInt &rhs) && { return std::move(*this += rhs); }
-
-BigInt BigInt::operator+(BigInt &&rhs) &&
-{
-    if (rhs.chunks.capacity() > chunks.capacity())
-        return std::move(rhs += *this);
-    return std::move(*this += rhs);
-}
-
-BigInt BigInt::operator-(const BigInt &rhs) const &
-{
-    if (rhs.chunks.size() > chunks.size())
-    {
-        auto res = rhs;
-        res.negate();
-        res += *this;
-        return res;
-    }
-    if (this == &rhs)
-        return Zero();
-    auto res = *this;
-    res -= rhs;
-    return res;
-}
-
-BigInt BigInt::operator-(BigInt &&rhs) const &
-{
-    if (this == &rhs)
-        return std::move(rhs = Zero());
-    rhs.negate();
-    return std::move(rhs += *this);
-}
-
-BigInt BigInt::operator-(const BigInt &rhs) && { return std::move(*this -= rhs); }
-
-BigInt BigInt::operator-(BigInt &&rhs) &&
-{
-    if (rhs.chunks.capacity() > chunks.capacity())
-        return *this - std::move(rhs);
-    return std::move(*this -= rhs);
-}
-
-static BigInt mul(const BigInt &lhs, const BigInt &rhs)
-{
-    BigInt res;
-    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
-    for (std::size_t i = 0; i < lhs.chunks.size(); ++i)
-    {
-        for (std::size_t j = 0; j < rhs.chunks.size(); ++j)
-        {
-            auto prod = static_cast<std::uint64_t>(lhs.chunks[i]) * rhs.chunks[j];
-            if (prod)
-                addChunk(res.chunks, i + j, static_cast<std::uint32_t>(prod));
-            if (prod >> 32)
-                addChunk(res.chunks, i + j + 1, static_cast<std::uint32_t>(prod >> 32));
-        }
-    }
-    return res;
-}
-
-struct Toom2Split
-{
-    BigInt low, high;
-
-    Toom2Split(const BigInt &big, const std::size_t sz)
-    {
-        auto iter1 = big.chunks.begin();
-        auto iter2 = iter1 + std::min<std::ptrdiff_t>(sz, big.chunks.end() - iter1);
-        auto iter3 = big.chunks.end();
-        low.chunks = std::vector<std::uint32_t>(iter1, iter2);
-        high.chunks = std::vector<std::uint32_t>(iter2, iter3);
-        normalize(low);
-        normalize(high);
-    }
-};
-
-static BigInt toom2(const BigInt &lhs, const BigInt &rhs)
-{
-    const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 2);
-    Toom2Split p(lhs, sz);
-    Toom2Split q(rhs, sz);
-    std::array<BigInt, 3> r;
-    r[0] = p.low * q.low;
-    r[2] = p.high * q.high;
-    r[1] = r[0] + r[2];
-    r[1] -= (std::move(p.high) - std::move(p.low)) * (std::move(q.high) - std::move(q.low));
-    BigInt res;
-    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
-    for (std::size_t i = 0; i < r.size(); ++i)
-    {
-        for (std::size_t j = 0; j < r[i].chunks.size(); ++j)
-        {
-            if (r[i].chunks[j])
-                addChunk(res.chunks, sz * i + j, r[i].chunks[j]);
-        }
-    }
-    return res;
-}
-
-struct Toom3Mat
-{
-    BigInt zero, one, negone, negtwo, inf;
-
-    Toom3Mat(const BigInt &big, const std::size_t sz)
-    {
-        BigInt b0, b1, b2;
-        auto iter1 = big.chunks.begin();
-        auto iter2 = iter1 + std::min<std::ptrdiff_t>(sz, big.chunks.end() - iter1);
-        auto iter3 = iter2 + std::min<std::ptrdiff_t>(sz, big.chunks.end() - iter2);
-        auto iter4 = big.chunks.end();
-        b0.chunks = std::vector<std::uint32_t>(iter1, iter2);
-        b1.chunks = std::vector<std::uint32_t>(iter2, iter3);
-        b2.chunks = std::vector<std::uint32_t>(iter3, iter4);
-        normalize(b0);
-        normalize(b1);
-        normalize(b2);
-        auto tmp = b0 + b2;
-        zero = b0;
-        one = tmp + b1;
-        negone = std::move(tmp) - std::move(b1);
-        negtwo = ((negone + b2) << 1) - std::move(b0);
-        inf = std::move(b2);
-    }
-};
-
-static BigInt div2(BigInt &&big)
-{
-    static const BigInt negOne(-1);
-    if (big == negOne)
-        return Zero();
-    else
-        return std::move(big >>= 1);
-}
-
-static BigInt toom3(const BigInt &lhs, const BigInt &rhs)
-{
-    static const BigInt three(3);
-    const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 3);
-    Toom3Mat p(lhs, sz);
-    Toom3Mat q(rhs, sz);
-    p.zero *= q.zero;
-    p.one *= q.one;
-    p.negone *= q.negone;
-    p.negtwo *= q.negtwo;
-    p.inf *= q.inf;
-    std::array<BigInt, 5> r;
-    r[0] = p.zero;
-    r[4] = p.inf;
-    r[3] = (std::move(p.negtwo) - p.one) / three;
-    r[1] = div2(std::move(p.one) - p.negone);
-    r[2] = std::move(p.negone) - std::move(p.zero);
-    r[3] = div2(r[2] - r[3]) + (std::move(p.inf) << 1);
-    r[2] += r[1] - r[4];
-    r[1] -= r[3];
-    BigInt res;
-    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
-    for (std::size_t i = 0; i < r.size(); ++i)
-    {
-        for (std::size_t j = 0; j < r[i].chunks.size(); ++j)
-        {
-            if (r[i].chunks[j])
-                addChunk(res.chunks, sz * i + j, r[i].chunks[j]);
-        }
-    }
-    return res;
-}
-
-static constexpr std::size_t Toom2Thresh = 550;
-static constexpr std::size_t Toom3Thresh = 2200;
-
-BigInt BigInt::operator*(const BigInt &rhs) const
-{
-    const auto score = chunks.size() * rhs.chunks.size();
-    auto res = score > Toom3Thresh   ? toom3(*this, rhs)
-               : score > Toom2Thresh ? toom2(*this, rhs)
-                                     : mul(*this, rhs);
-    res.isNeg = isNeg != rhs.isNeg;
-    normalize(res);
-    return res;
-}
-
-BigInt BigInt::operator/(const BigInt &rhs) const & { return divmod(*this, rhs).q; }
-BigInt BigInt::operator/(BigInt &&rhs) const & { return divmod(*this, std::move(rhs)).q; }
-BigInt BigInt::operator/(const BigInt &rhs) && { return divmod(std::move(*this), rhs).q; }
-BigInt BigInt::operator/(BigInt &&rhs) && { return divmod(std::move(*this), std::move(rhs)).q; }
-BigInt BigInt::operator%(const BigInt &rhs) const & { return divmod(*this, rhs).r; }
-BigInt BigInt::operator%(BigInt &&rhs) const & { return divmod(*this, std::move(rhs)).r; }
-BigInt BigInt::operator%(const BigInt &rhs) && { return divmod(std::move(*this), rhs).r; }
-BigInt BigInt::operator%(BigInt &&rhs) && { return divmod(std::move(*this), std::move(rhs)).r; }
-
 BigInt BigInt::operator~() const &
 {
     auto res = *this;
@@ -612,112 +401,7 @@ BigInt BigInt::operator~() &&
     return std::move(*this);
 }
 
-BigInt BigInt::operator&(const BigInt &rhs) const &
-{
-    if (rhs.chunks.size() > chunks.size())
-    {
-        auto res = rhs;
-        res &= *this;
-        return res;
-    }
-    auto res = *this;
-    res &= rhs;
-    return res;
-}
-
-BigInt BigInt::operator&(BigInt &&rhs) const & { return std::move(rhs &= *this); }
-BigInt BigInt::operator&(const BigInt &rhs) && { return std::move(*this &= rhs); }
-
-BigInt BigInt::operator&(BigInt &&rhs) &&
-{
-    if (rhs.chunks.capacity() > chunks.capacity())
-        return std::move(rhs &= *this);
-    return std::move(*this &= rhs);
-}
-
-BigInt BigInt::operator|(const BigInt &rhs) const &
-{
-    if (rhs.chunks.size() > chunks.size())
-    {
-        auto res = rhs;
-        res |= *this;
-        return res;
-    }
-    auto res = *this;
-    res |= rhs;
-    return res;
-}
-
-BigInt BigInt::operator|(BigInt &&rhs) const & { return std::move(rhs |= *this); }
-BigInt BigInt::operator|(const BigInt &rhs) && { return std::move(*this |= rhs); }
-
-BigInt BigInt::operator|(BigInt &&rhs) &&
-{
-    if (rhs.chunks.capacity() > chunks.capacity())
-        return std::move(rhs |= *this);
-    return std::move(*this |= rhs);
-}
-
-BigInt BigInt::operator^(const BigInt &rhs) const &
-{
-    if (rhs.chunks.size() > chunks.size())
-    {
-        auto res = rhs;
-        res ^= *this;
-        return res;
-    }
-    auto res = *this;
-    res ^= rhs;
-    return res;
-}
-
-BigInt BigInt::operator^(BigInt &&rhs) const & { return std::move(rhs ^= *this); }
-BigInt BigInt::operator^(const BigInt &rhs) && { return std::move(*this ^= rhs); }
-
-BigInt BigInt::operator^(BigInt &&rhs) &&
-{
-    if (rhs.chunks.capacity() > chunks.capacity())
-        return std::move(rhs ^= *this);
-    return std::move(*this ^= rhs);
-}
-
-BigInt BigInt::operator<<(const std::int64_t n) const &
-{
-    auto res = *this;
-    res <<= n;
-    return res;
-}
-
-BigInt BigInt::operator<<(const std::int64_t n) && { return std::move(*this <<= n); }
-
-BigInt BigInt::operator>>(const std::int64_t n) const &
-{
-    auto res = *this;
-    res >>= n;
-    return res;
-}
-
-BigInt BigInt::operator>>(const std::int64_t n) && { return std::move(*this >>= n); }
-
 BigInt::operator bool() const { return chunks.size(); }
-
-bool BigInt::operator==(const BigInt &rhs) const
-{
-    return this == &rhs ||
-           (isNeg == rhs.isNeg && chunks == rhs.chunks);
-}
-
-static std::strong_ordering cmp(const BigInt &diff)
-{
-    return diff.chunks.size() == 0 ? std::strong_ordering::equal
-           : diff.isNeg            ? std::strong_ordering::less
-                                   : std::strong_ordering::greater;
-}
-
-std::strong_ordering BigInt::operator<=>(const BigInt &rhs) const & { return cmp(*this - rhs); }
-std::strong_ordering BigInt::operator<=>(BigInt &&rhs) const & { return cmp(*this - std::move(rhs)); }
-std::strong_ordering BigInt::operator<=>(const BigInt &rhs) && { return cmp(std::move(*this) - rhs); }
-std::strong_ordering BigInt::operator<=>(BigInt &&rhs) && { return cmp(std::move(*this) - std::move(rhs)); }
 
 void BigInt::negate()
 {
@@ -1001,6 +685,315 @@ BigInt BigInt::pow(const BigInt &base, std::int64_t exp)
     }
     return x * y;
 }
+
+BigInt operator+(const BigInt &lhs, const BigInt &rhs)
+{
+    if (rhs.chunks.size() > lhs.chunks.size())
+    {
+        auto res = rhs;
+        res += lhs;
+        return res;
+    }
+    auto res = lhs;
+    res += rhs;
+    return res;
+}
+
+BigInt operator+(const BigInt &lhs, BigInt &&rhs) { return std::move(rhs += lhs); }
+BigInt operator+(BigInt &&lhs, const BigInt &rhs) { return std::move(lhs += rhs); }
+
+BigInt operator+(BigInt &&lhs, BigInt &&rhs)
+{
+    if (rhs.chunks.capacity() > lhs.chunks.capacity())
+        return std::move(rhs += lhs);
+    return std::move(lhs += rhs);
+}
+
+BigInt operator-(const BigInt &lhs, const BigInt &rhs)
+{
+    if (rhs.chunks.size() > lhs.chunks.size())
+    {
+        auto res = rhs;
+        res.negate();
+        res += lhs;
+        return res;
+    }
+    if (&lhs == &rhs)
+        return Zero();
+    auto res = lhs;
+    res -= rhs;
+    return res;
+}
+
+BigInt operator-(const BigInt &lhs, BigInt &&rhs)
+{
+    if (&lhs == &rhs)
+        return std::move(rhs = Zero());
+    rhs.negate();
+    return std::move(rhs += lhs);
+}
+
+BigInt operator-(BigInt &&lhs, const BigInt &rhs) { return std::move(lhs -= rhs); }
+
+BigInt operator-(BigInt &&lhs, BigInt &&rhs)
+{
+    if (rhs.chunks.capacity() > lhs.chunks.capacity())
+        return lhs - std::move(rhs);
+    return std::move(lhs -= rhs);
+}
+
+static BigInt mul(const BigInt &lhs, const BigInt &rhs)
+{
+    BigInt res;
+    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
+    for (std::size_t i = 0; i < lhs.chunks.size(); ++i)
+    {
+        for (std::size_t j = 0; j < rhs.chunks.size(); ++j)
+        {
+            auto prod = static_cast<std::uint64_t>(lhs.chunks[i]) * rhs.chunks[j];
+            if (prod)
+                addChunk(res.chunks, i + j, static_cast<std::uint32_t>(prod));
+            if (prod >> 32)
+                addChunk(res.chunks, i + j + 1, static_cast<std::uint32_t>(prod >> 32));
+        }
+    }
+    return res;
+}
+
+struct Toom2Split
+{
+    BigInt low, high;
+
+    Toom2Split(const BigInt &big, const std::size_t sz)
+    {
+        auto iter1 = big.chunks.begin();
+        auto iter2 = iter1 + std::min<std::ptrdiff_t>(sz, big.chunks.end() - iter1);
+        auto iter3 = big.chunks.end();
+        low.chunks = std::vector<std::uint32_t>(iter1, iter2);
+        high.chunks = std::vector<std::uint32_t>(iter2, iter3);
+        normalize(low);
+        normalize(high);
+    }
+};
+
+static BigInt toom2(const BigInt &lhs, const BigInt &rhs)
+{
+    const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 2);
+    Toom2Split p(lhs, sz);
+    Toom2Split q(rhs, sz);
+    std::array<BigInt, 3> r;
+    r[0] = p.low * q.low;
+    r[2] = p.high * q.high;
+    r[1] = r[0] + r[2];
+    r[1] -= (std::move(p.high) - std::move(p.low)) * (std::move(q.high) - std::move(q.low));
+    BigInt res;
+    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
+    for (std::size_t i = 0; i < r.size(); ++i)
+    {
+        for (std::size_t j = 0; j < r[i].chunks.size(); ++j)
+        {
+            if (r[i].chunks[j])
+                addChunk(res.chunks, sz * i + j, r[i].chunks[j]);
+        }
+    }
+    return res;
+}
+
+struct Toom3Mat
+{
+    BigInt zero, one, negone, negtwo, inf;
+
+    Toom3Mat(const BigInt &big, const std::size_t sz)
+    {
+        BigInt b0, b1, b2;
+        auto iter1 = big.chunks.begin();
+        auto iter2 = iter1 + std::min<std::ptrdiff_t>(sz, big.chunks.end() - iter1);
+        auto iter3 = iter2 + std::min<std::ptrdiff_t>(sz, big.chunks.end() - iter2);
+        auto iter4 = big.chunks.end();
+        b0.chunks = std::vector<std::uint32_t>(iter1, iter2);
+        b1.chunks = std::vector<std::uint32_t>(iter2, iter3);
+        b2.chunks = std::vector<std::uint32_t>(iter3, iter4);
+        normalize(b0);
+        normalize(b1);
+        normalize(b2);
+        auto tmp = b0 + b2;
+        zero = b0;
+        one = tmp + b1;
+        negone = std::move(tmp) - std::move(b1);
+        negtwo = ((negone + b2) << 1) - std::move(b0);
+        inf = std::move(b2);
+    }
+};
+
+static BigInt div2(BigInt &&big)
+{
+    static const BigInt negOne(-1);
+    if (big == negOne)
+        return Zero();
+    else
+        return std::move(big >>= 1);
+}
+
+static BigInt toom3(const BigInt &lhs, const BigInt &rhs)
+{
+    static const BigInt three(3);
+    const auto sz = ceilDiv(std::max(lhs.chunks.size(), rhs.chunks.size()), 3);
+    Toom3Mat p(lhs, sz);
+    Toom3Mat q(rhs, sz);
+    p.zero *= q.zero;
+    p.one *= q.one;
+    p.negone *= q.negone;
+    p.negtwo *= q.negtwo;
+    p.inf *= q.inf;
+    std::array<BigInt, 5> r;
+    r[0] = p.zero;
+    r[4] = p.inf;
+    r[3] = (std::move(p.negtwo) - p.one) / three;
+    r[1] = div2(std::move(p.one) - p.negone);
+    r[2] = std::move(p.negone) - std::move(p.zero);
+    r[3] = div2(r[2] - r[3]) + (std::move(p.inf) << 1);
+    r[2] += r[1] - r[4];
+    r[1] -= r[3];
+    BigInt res;
+    res.chunks.resize(lhs.chunks.size() + rhs.chunks.size() + 1);
+    for (std::size_t i = 0; i < r.size(); ++i)
+    {
+        for (std::size_t j = 0; j < r[i].chunks.size(); ++j)
+        {
+            if (r[i].chunks[j])
+                addChunk(res.chunks, sz * i + j, r[i].chunks[j]);
+        }
+    }
+    return res;
+}
+
+static constexpr std::size_t Toom2Thresh = 550;
+static constexpr std::size_t Toom3Thresh = 2200;
+
+BigInt operator*(const BigInt &lhs, const BigInt &rhs)
+{
+    const auto score = lhs.chunks.size() * rhs.chunks.size();
+    auto res = score > Toom3Thresh   ? toom3(lhs, rhs)
+               : score > Toom2Thresh ? toom2(lhs, rhs)
+                                     : mul(lhs, rhs);
+    res.isNeg = lhs.isNeg != rhs.isNeg;
+    normalize(res);
+    return res;
+}
+
+BigInt operator/(const BigInt &lhs, const BigInt &rhs) { return BigInt::divmod(lhs, rhs).q; }
+BigInt operator/(const BigInt &lhs, BigInt &&rhs) { return BigInt::divmod(lhs, std::move(rhs)).q; }
+BigInt operator/(BigInt &&lhs, const BigInt &rhs) { return BigInt::divmod(std::move(lhs), rhs).q; }
+BigInt operator/(BigInt &&lhs, BigInt &&rhs) { return BigInt::divmod(std::move(lhs), std::move(rhs)).q; }
+BigInt operator%(const BigInt &lhs, const BigInt &rhs) { return BigInt::divmod(lhs, rhs).r; }
+BigInt operator%(const BigInt &lhs, BigInt &&rhs) { return BigInt::divmod(lhs, std::move(rhs)).r; }
+BigInt operator%(BigInt &&lhs, const BigInt &rhs) { return BigInt::divmod(std::move(lhs), rhs).r; }
+BigInt operator%(BigInt &&lhs, BigInt &&rhs) { return BigInt::divmod(std::move(lhs), std::move(rhs)).r; }
+
+BigInt operator&(const BigInt &lhs, const BigInt &rhs)
+{
+    if (rhs.chunks.size() > lhs.chunks.size())
+    {
+        auto res = rhs;
+        res &= lhs;
+        return res;
+    }
+    auto res = lhs;
+    res &= rhs;
+    return res;
+}
+
+BigInt operator&(const BigInt &lhs, BigInt &&rhs) { return std::move(rhs &= lhs); }
+BigInt operator&(BigInt &&lhs, const BigInt &rhs) { return std::move(lhs &= rhs); }
+
+BigInt operator&(BigInt &&lhs, BigInt &&rhs)
+{
+    if (rhs.chunks.capacity() > lhs.chunks.capacity())
+        return std::move(rhs &= lhs);
+    return std::move(lhs &= rhs);
+}
+
+BigInt operator|(const BigInt &lhs, const BigInt &rhs)
+{
+    if (rhs.chunks.size() > lhs.chunks.size())
+    {
+        auto res = rhs;
+        res |= lhs;
+        return res;
+    }
+    auto res = lhs;
+    res |= rhs;
+    return res;
+}
+
+BigInt operator|(const BigInt &lhs, BigInt &&rhs) { return std::move(rhs |= lhs); }
+BigInt operator|(BigInt &&lhs, const BigInt &rhs) { return std::move(lhs |= rhs); }
+
+BigInt operator|(BigInt &&lhs, BigInt &&rhs)
+{
+    if (rhs.chunks.capacity() > lhs.chunks.capacity())
+        return std::move(rhs |= lhs);
+    return std::move(lhs |= rhs);
+}
+
+BigInt operator^(const BigInt &lhs, const BigInt &rhs)
+{
+    if (rhs.chunks.size() > lhs.chunks.size())
+    {
+        auto res = rhs;
+        res ^= lhs;
+        return res;
+    }
+    auto res = lhs;
+    res ^= rhs;
+    return res;
+}
+
+BigInt operator^(const BigInt &lhs, BigInt &&rhs) { return std::move(rhs ^= lhs); }
+BigInt operator^(BigInt &&lhs, const BigInt &rhs) { return std::move(lhs ^= rhs); }
+
+BigInt operator^(BigInt &&lhs, BigInt &&rhs)
+{
+    if (rhs.chunks.capacity() > lhs.chunks.capacity())
+        return std::move(rhs ^= lhs);
+    return std::move(lhs ^= rhs);
+}
+
+BigInt operator<<(const BigInt &lhs, std::int64_t rhs)
+{
+    auto res = lhs;
+    res <<= rhs;
+    return res;
+}
+
+BigInt operator<<(BigInt &&lhs, std::int64_t rhs) { return std::move(lhs <<= rhs); }
+
+BigInt operator>>(const BigInt &lhs, std::int64_t rhs)
+{
+    auto res = lhs;
+    res >>= rhs;
+    return res;
+}
+
+BigInt operator>>(BigInt &&lhs, std::int64_t rhs) { return std::move(lhs >>= rhs); }
+
+bool operator==(const BigInt &lhs, const BigInt &rhs)
+{
+    return &lhs == &rhs ||
+           (lhs.isNeg == rhs.isNeg && lhs.chunks == rhs.chunks);
+}
+
+static std::strong_ordering cmp(const BigInt &diff)
+{
+    return diff.chunks.size() == 0 ? std::strong_ordering::equal
+           : diff.isNeg            ? std::strong_ordering::less
+                                   : std::strong_ordering::greater;
+}
+
+std::strong_ordering operator<=>(const BigInt &lhs, const BigInt &rhs) { return cmp(lhs - rhs); }
+std::strong_ordering operator<=>(const BigInt &lhs, BigInt &&rhs) { return cmp(lhs - std::move(rhs)); }
+std::strong_ordering operator<=>(BigInt &&lhs, const BigInt &rhs) { return cmp(std::move(lhs) - rhs); }
+std::strong_ordering operator<=>(BigInt &&lhs, BigInt &&rhs) { return cmp(std::move(lhs) - std::move(rhs)); }
 
 std::size_t std::hash<BigInt>::operator()(const BigInt &val) const noexcept
 {
