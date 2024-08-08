@@ -43,25 +43,6 @@ static bool top1(std::deque<BigInt> &vals, BigInt &top)
     return true;
 };
 
-static void outHelp()
-{
-    std::cout << "There are 10 stacks. 0 is the primary stack and math ops are\n"
-              << "only available to stack 0. l, t, and stack ops default to 0,\n"
-              << "and memory ops default to 1. But those ops can be applied to\n"
-              << "a specific stack by adding a digit suffix to the op (e.g. s1\n"
-              << "to swap on stack 1).\n"
-              << '\n'
-              << "math ops:\n"
-              << "    +, -, *, **, /, %, /%, ~, &, |, ^, <<, >>\n"
-              << "stack ops:\n"
-              << "    s (swap), u (rotate up), d (rotate down), p (pop), c (copy)\n"
-              << "memory ops:\n"
-              << "    st (store), ld (load)\n"
-              << "output ops:\n"
-              << "    l (list), t (top), dec, hex\n"
-              << "reset (to clear everything), quit (to quit)\n";
-}
-
 static bool fromString(std::string_view str, BigInt &out)
 {
     try
@@ -98,30 +79,6 @@ struct Calc
     {
         return hex ? val.toHex() : val.toString();
     }
-
-    void outList(const std::size_t i)
-    {
-        auto &vals = regs[i];
-        for (const auto &val : vals)
-        {
-            std::cout << out(val) << '\n';
-        }
-    }
-
-    void outTop(const std::size_t i)
-    {
-        auto &vals = regs[i];
-        for (auto j = vals.size() > 2 ? vals.size() - 2 : 0; j < vals.size(); ++j)
-        {
-            std::cout << out(vals[j]) << '\n';
-        }
-    }
-
-    static std::unordered_map<std::string, void (*)(Calc &)> mathOps;
-    static std::unordered_map<std::string, void (*)(Calc &)> mainOps;
-    static std::unordered_map<std::string, void (*)(Calc &, std::size_t)> regOps;
-    static std::unordered_map<std::string, void (*)(Calc &, std::size_t)> memOps;
-    static std::unordered_set<std::string> outOps;
 
     void run()
     {
@@ -164,7 +121,7 @@ struct Calc
                     if (auto outIter = outOps.find(op); outIter != outOps.end())
                     {
                         lastIdx = idx.value_or(0);
-                        outType = *outIter;
+                        outType = std::move(op);
                         continue;
                     }
                 }
@@ -186,24 +143,20 @@ struct Calc
                 }
                 std::cout << "unknown op " << input << '\n';
             }
-            switch (outType.size() ? outType[0] : '\0')
+            if (auto outIter = outOps.find(outType); outIter != outOps.end())
             {
-            case 'l':
-                outList(lastIdx);
-                break;
-            case 't':
-                outTop(lastIdx);
-                break;
-            case 'h':
-                outHelp();
-                break;
-            case 'q':
-                return;
-                break;
+                if (outIter->second(*this, lastIdx))
+                    return;
             }
         }
         std::cout << '\n';
     }
+
+    static std::unordered_map<std::string, void (*)(Calc &)> mathOps;
+    static std::unordered_map<std::string, void (*)(Calc &)> mainOps;
+    static std::unordered_map<std::string, void (*)(Calc &, std::size_t)> regOps;
+    static std::unordered_map<std::string, void (*)(Calc &, std::size_t)> memOps;
+    static std::unordered_map<std::string, bool (*)(Calc &, std::size_t)> outOps;
 };
 
 static void math(Calc &calc, const std::function<BigInt(BigInt &&lhs, BigInt &&rhs)> &fn)
@@ -461,7 +414,54 @@ std::unordered_map<std::string, void (*)(Calc &, std::size_t)> Calc::memOps{
     {"ld", memLoad},
 };
 
-std::unordered_set<std::string> Calc::outOps{"l", "t", "h", "quit"};
+static bool outList(Calc &calc, const std::size_t i)
+{
+    auto &vals = calc.regs[i];
+    for (const auto &val : vals)
+    {
+        std::cout << calc.out(val) << '\n';
+    }
+    return false;
+}
+
+static bool outTop(Calc &calc, const std::size_t i)
+{
+    auto &vals = calc.regs[i];
+    for (auto j = vals.size() > 2 ? vals.size() - 2 : 0; j < vals.size(); ++j)
+    {
+        std::cout << calc.out(vals[j]) << '\n';
+    }
+    return false;
+}
+
+static bool outHelp(Calc &, std::size_t)
+{
+    std::cout << "There are 10 stacks. 0 is the primary stack and math ops are\n"
+              << "only available to stack 0. l, t, and stack ops default to 0,\n"
+              << "and memory ops default to 1. But those ops can be applied to\n"
+              << "a specific stack by adding a digit suffix to the op (e.g. s1\n"
+              << "to swap on stack 1).\n"
+              << '\n'
+              << "math ops:\n"
+              << "    +, -, *, **, /, %, /%, ~, &, |, ^, <<, >>\n"
+              << "stack ops:\n"
+              << "    s (swap), u (rotate up), d (rotate down), p (pop), c (copy)\n"
+              << "memory ops:\n"
+              << "    st (store), ld (load)\n"
+              << "output ops:\n"
+              << "    l (list), t (top), dec, hex\n"
+              << "reset (to clear everything), quit (to quit)\n";
+    return false;
+}
+
+static bool outQuit(Calc &, std::size_t) { return true; }
+
+std::unordered_map<std::string, bool (*)(Calc &, std::size_t)> Calc::outOps{
+    {"l", outList},
+    {"t", outTop},
+    {"h", outHelp},
+    {"quit", outQuit},
+};
 
 int main()
 {
