@@ -152,11 +152,15 @@ struct Calc
         std::cout << '\n';
     }
 
-    static const std::unordered_map<std::string, void (*)(Calc &)> mathOps;
-    static const std::unordered_map<std::string, void (*)(Calc &)> mainOps;
-    static const std::unordered_map<std::string, void (*)(Calc &, std::size_t)> regOps;
-    static const std::unordered_map<std::string, void (*)(Calc &, std::size_t)> memOps;
-    static const std::unordered_map<std::string, bool (*)(Calc &, std::size_t)> outOps;
+    using CalcOp = void(Calc &);
+    using CalcIndexOp = void(Calc &, std::size_t);
+    using CalcExitIndexOp = bool(Calc &, std::size_t);
+
+    static const std::unordered_map<std::string, CalcOp &> mathOps;
+    static const std::unordered_map<std::string, CalcOp &> mainOps;
+    static const std::unordered_map<std::string, CalcIndexOp &> regOps;
+    static const std::unordered_map<std::string, CalcIndexOp &> memOps;
+    static const std::unordered_map<std::string, CalcExitIndexOp &> outOps;
 };
 
 static void math(Calc &calc, const std::function<BigInt(BigInt &&lhs, BigInt &&rhs)> &fn)
@@ -289,7 +293,7 @@ static void mathShiftR(Calc &calc)
          { return std::move(lhs) >> std::move(rhs).toInteger(); });
 }
 
-const std::unordered_map<std::string, void (*)(Calc &)> Calc::mathOps{
+const std::unordered_map<std::string, Calc::CalcOp &> Calc::mathOps{
     {"+", mathAdd},
     {"-", mathSub},
     {"*", mathMul},
@@ -320,7 +324,7 @@ static void mainReset(Calc &calc)
     calc.regs = Calc::RegsType(10);
 }
 
-const std::unordered_map<std::string, void (*)(Calc &)> Calc::mainOps{
+const std::unordered_map<std::string, Calc::CalcOp &> Calc::mainOps{
     {"hex", mainHex},
     {"dec", mainDec},
     {"reset", mainReset},
@@ -377,7 +381,7 @@ static void regCopy(Calc &calc, std::size_t i)
     }
 }
 
-const std::unordered_map<std::string, void (*)(Calc &, std::size_t)> Calc::regOps{
+const std::unordered_map<std::string, Calc::CalcIndexOp &> Calc::regOps{
     {"s", regSwap},
     {"u", regRotateUp},
     {"d", regRotateDown},
@@ -409,7 +413,7 @@ static void memLoad(Calc &calc, std::size_t i)
     }
 }
 
-const std::unordered_map<std::string, void (*)(Calc &, std::size_t)> Calc::memOps{
+const std::unordered_map<std::string, Calc::CalcIndexOp &> Calc::memOps{
     {"st", memStore},
     {"ld", memLoad},
 };
@@ -456,7 +460,7 @@ static bool outHelp(Calc &, std::size_t)
 
 static bool outQuit(Calc &, std::size_t) { return true; }
 
-const std::unordered_map<std::string, bool (*)(Calc &, std::size_t)> Calc::outOps{
+const std::unordered_map<std::string, Calc::CalcExitIndexOp &> Calc::outOps{
     {"l", outList},
     {"t", outTop},
     {"h", outHelp},
