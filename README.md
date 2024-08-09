@@ -9,7 +9,7 @@ things.
 
 - Data member is not a string, it is a vector of 32 bit ints using all 2^32
   values per element.
-- Can be constructed from and converted to an int, float, or string(base10 or
+- Can be constructed from and converted to an int, float, or string (base10 or
   hex representation).
 - All operators are implemented.
 - Karasuba and Toom3 multiplication optimizations.
