@@ -56,16 +56,6 @@ static bool subChunk(std::vector<std::uint32_t> &chunks, std::size_t i, const st
     return hasBorrow;
 }
 
-static void normalize(BigInt &big)
-{
-    while (big.chunks.size() && big.chunks.back() == 0)
-    {
-        big.chunks.pop_back();
-    }
-    if (big.chunks.size() == 0)
-        big.isNeg = false;
-}
-
 static void add(BigInt &acc, const BigInt &other)
 {
     acc.chunks.resize(std::max(acc.chunks.size(), other.chunks.size()) + 1);
@@ -74,7 +64,7 @@ static void add(BigInt &acc, const BigInt &other)
         if (other.chunks[i])
             addChunk(acc.chunks, i, other.chunks[i]);
     }
-    normalize(acc);
+    acc.normalize();
 }
 
 static void sub(BigInt &acc, const BigInt &other)
@@ -96,7 +86,7 @@ static void sub(BigInt &acc, const BigInt &other)
         addChunk(acc.chunks, 0, 1);
         acc.negate();
     }
-    normalize(acc);
+    acc.normalize();
 }
 
 BigInt::BigInt() {}
@@ -115,7 +105,7 @@ BigInt::BigInt(const long long num) : BigInt(static_cast<unsigned long long>(num
             chunk = ~chunk;
         }
         isNeg = true;
-        normalize(*this);
+        normalize();
     }
 }
 
@@ -250,7 +240,7 @@ static void bitwise(BigInt &lhs, const BigInt &rhs, const std::function<void(std
             bitwiseNormalizeNeg(resBorrow, a);
     }
     lhs.isNeg = resIsNeg;
-    normalize(lhs);
+    lhs.normalize();
 }
 
 BigInt &BigInt::operator&=(const BigInt &other)
@@ -322,7 +312,7 @@ BigInt &BigInt::operator<<=(const std::int64_t n)
             x |= chunks[i - (off + 1)] >> (32 - s);
         chunks[i] = x;
     }
-    normalize(*this);
+    normalize();
     return *this;
 }
 
@@ -354,7 +344,7 @@ BigInt &BigInt::operator>>=(const std::int64_t n)
     }
     if (isNeg)
         addChunk(chunks, 0, 1);
-    normalize(*this);
+    normalize();
     return *this;
 }
 
@@ -410,6 +400,16 @@ void BigInt::negate()
     isNeg = !isNeg;
 }
 
+void BigInt::normalize()
+{
+    while (chunks.size() && chunks.back() == 0)
+    {
+        chunks.pop_back();
+    }
+    if (chunks.size() == 0)
+        isNeg = false;
+}
+
 void BigInt::invert()
 {
     if (isNeg)
@@ -420,7 +420,7 @@ void BigInt::invert()
         addChunk(chunks, 0, 1);
     }
     isNeg = !isNeg;
-    normalize(*this);
+    normalize();
 }
 
 std::int64_t BigInt::toInteger() const
@@ -543,7 +543,7 @@ BigInt BigInt::fromString(std::string_view str)
             addChunk(res.chunks, 0, static_cast<std::uint32_t>(tmp));
         if (tmp >> 32)
             addChunk(res.chunks, 1, static_cast<std::uint32_t>(tmp >> 32));
-        normalize(res);
+        res.normalize();
         str.remove_prefix(sub.size());
     }
     if (strIsNeg)
@@ -570,7 +570,7 @@ BigInt BigInt::fromHex(std::string_view str)
         if (fcRes.ec != std::errc{} || fcRes.ptr != sub.data() + sub.size())
             throw std::invalid_argument(exceptionMsg);
     }
-    normalize(res);
+    res.normalize();
     if (strIsNeg)
         res.negate();
     return res;
@@ -657,10 +657,10 @@ DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
             do
                 --qhat;
             while (!divmodAddBack(res.r, v, j));
-        normalize(res.r);
+        res.r.normalize();
         res.q.chunks[j] = static_cast<std::uint32_t>(qhat);
     }
-    normalize(res.q);
+    res.q.normalize();
     res.r >>= d;
     return res;
 }
@@ -771,8 +771,8 @@ struct Toom2Split
         auto iter3 = big.chunks.end();
         low.chunks = std::vector<std::uint32_t>(iter1, iter2);
         high.chunks = std::vector<std::uint32_t>(iter2, iter3);
-        normalize(low);
-        normalize(high);
+        low.normalize();
+        high.normalize();
     }
 };
 
@@ -813,9 +813,9 @@ struct Toom3Mat
         b0.chunks = std::vector<std::uint32_t>(iter1, iter2);
         b1.chunks = std::vector<std::uint32_t>(iter2, iter3);
         b2.chunks = std::vector<std::uint32_t>(iter3, iter4);
-        normalize(b0);
-        normalize(b1);
-        normalize(b2);
+        b0.normalize();
+        b1.normalize();
+        b2.normalize();
         auto tmp = b0 + b2;
         zero = b0;
         one = tmp + b1;
@@ -877,7 +877,7 @@ BigInt operator*(const BigInt &lhs, const BigInt &rhs)
                : score > Toom2Thresh ? toom2(lhs, rhs)
                                      : mul(lhs, rhs);
     res.isNeg = lhs.isNeg != rhs.isNeg;
-    normalize(res);
+    res.normalize();
     return res;
 }
 
