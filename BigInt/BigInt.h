@@ -50,6 +50,7 @@ struct BigInt
     BigInt operator~() &&;
     explicit operator bool() const;
 
+    void normalize();
     void negate();
     void invert();
 
