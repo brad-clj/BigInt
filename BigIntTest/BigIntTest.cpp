@@ -696,6 +696,10 @@ TEST(BigIntToDouble, Works)
     EXPECT_TRUE(BigInt(ld).toLongDouble() == ld);
     ld = 108202001634494442096567309902213754431787678782316556874014928175471634594723.0l;
     EXPECT_TRUE(BigInt(ld).toLongDouble() == ld);
+    // infinity
+    EXPECT_TRUE(BigInt::pow(BigInt(10), 40).toFloat() == INFINITY);
+    EXPECT_TRUE(-BigInt::pow(BigInt(10), 40).toFloat() == -INFINITY);
+    EXPECT_TRUE(BigInt::pow(BigInt(10), 310).toDouble() == INFINITY);
 }
 
 TEST(BigIntToString, Works)
