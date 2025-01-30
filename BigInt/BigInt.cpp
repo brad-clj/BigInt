@@ -638,12 +638,12 @@ DivModRes BigInt::divmod(BigInt &&lhs, BigInt &&rhs)
         res.q.chunks.resize(res.r.chunks.size() + 1 - n);
     for (std::size_t j = res.q.chunks.size(); j--;)
     {
-        std::uint64_t uu = res.r.chunks[j + n - 1];
+        std::uint64_t uu = j + n - 1 < res.r.chunks.size() ? res.r.chunks[j + n - 1] : 0;
         if (j + n < res.r.chunks.size())
             uu |= static_cast<std::uint64_t>(res.r.chunks[j + n]) << 32;
         std::uint64_t qhat = uu / v1;
         std::uint64_t rhat = uu % v1;
-        auto u2 = j + n >= 2 ? res.r.chunks[j + n - 2] : 0;
+        auto u2 = j + n >= 2 && j + n - 1 < res.r.chunks.size() ? res.r.chunks[j + n - 2] : 0;
         while (qhat >> 32 || qhat * v2 > (rhat << 32 | u2))
         {
             --qhat;
